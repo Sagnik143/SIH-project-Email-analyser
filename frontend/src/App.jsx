@@ -9,6 +9,7 @@ import IoCVault from './components/IoCVault';
 import HeaderInspector from './components/HeaderInspector';
 import ForensicReportModal from './components/ForensicReportModal';
 import EmailInputModal from './components/EmailInputModal';
+import { API_BASE_URL } from './config';
 import { Shield, Loader2, AlertCircle, RefreshCw, Radio } from 'lucide-react';
 
 export default function App() {
@@ -27,14 +28,14 @@ export default function App() {
     async function init() {
       try {
         // Fetch health & model status
-        const healthRes = await fetch('/api/health');
+        const healthRes = await fetch(`${API_BASE_URL}/api/health`);
         if (healthRes.ok) {
           const healthData = await healthRes.json();
           if (healthData.primaryModel) setOpenrouterModel(healthData.primaryModel);
         }
 
         // Fetch threat sample datasets
-        const samplesRes = await fetch('/api/samples');
+        const samplesRes = await fetch(`${API_BASE_URL}/api/samples`);
         if (samplesRes.ok) {
           const samplesData = await samplesRes.json();
           const list = samplesData.samples || [];
@@ -61,7 +62,7 @@ export default function App() {
 
     try {
       // Fetch sample raw content
-      const res = await fetch(`/api/samples/${sampleId}`);
+      const res = await fetch(`${API_BASE_URL}/api/samples/${sampleId}`);
       if (!res.ok) throw new Error('Failed to load sample dataset');
       const sample = await res.json();
 
@@ -80,7 +81,7 @@ export default function App() {
     setError(null);
 
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rawEmail: rawEmailText })

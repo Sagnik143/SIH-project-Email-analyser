@@ -9,8 +9,9 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
-        changeOrigin: true
+        target: 'https://emailanalyzer-fvx9.onrender.com',
+        changeOrigin: true,
+        secure: true
       }
     }
   }
