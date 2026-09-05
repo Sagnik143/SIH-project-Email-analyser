@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, Link, Paperclip, Globe, Copy, Check, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { Database, Link, Paperclip, Globe, Copy, Check, AlertTriangle } from 'lucide-react';
 
 export default function IoCVault({ iocs }) {
   const [activeTab, setActiveTab] = useState('urls');
@@ -19,50 +19,50 @@ export default function IoCVault({ iocs }) {
   const domains = iocs.domains || [];
 
   return (
-    <div className="glass-panel p-5 space-y-4">
+    <div className="app-card p-6 space-y-4 bg-white border-slate-200 shadow-xs">
       
       {/* Title and Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-            <Database className="w-4 h-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+            <Database className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
-              Indicators of Compromise (IoC) Vault
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+              Threat Indicators & Extracted Evidence (IoCs)
             </h3>
-            <p className="text-[11px] text-slate-400">
-              Extracted threat telemetry artifacts: defanged URLs, network addresses, and cryptographic file hashes
+            <p className="text-xs text-slate-500">
+              Safe defanged hyperlinks, file attachment hashes, and network addresses
             </p>
           </div>
         </div>
 
         {/* Tab Buttons */}
-        <div className="flex items-center gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800 text-xs font-mono">
+        <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('urls')}
-            className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
-              activeTab === 'urls' ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              activeTab === 'urls' ? 'bg-white text-blue-600 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Link className="w-3.5 h-3.5" />
-            <span>URLs ({urls.length})</span>
+            <span>Links ({urls.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('attachments')}
-            className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
-              activeTab === 'attachments' ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              activeTab === 'attachments' ? 'bg-white text-purple-600 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Paperclip className="w-3.5 h-3.5" />
-            <span>Files ({attachments.length})</span>
+            <span>Attachments ({attachments.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('ips')}
-            className={`px-3 py-1.5 rounded-md transition flex items-center gap-1.5 ${
-              activeTab === 'ips' ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+              activeTab === 'ips' ? 'bg-white text-emerald-600 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <Globe className="w-3.5 h-3.5" />
@@ -73,35 +73,35 @@ export default function IoCVault({ iocs }) {
 
       {/* Tab 1: URLs */}
       {activeTab === 'urls' && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {urls.length === 0 ? (
-            <div className="p-6 text-center text-xs font-mono text-slate-500">
-              No hyperlinks extracted from email body.
+            <div className="p-8 text-center text-xs font-medium text-slate-400 bg-slate-50 rounded-xl">
+              No hyperlinks detected in email body.
             </div>
           ) : (
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
               {urls.map((u, i) => (
                 <div 
                   key={i} 
-                  className={`p-3 rounded-lg border text-xs flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                    u.isSuspicious ? 'bg-rose-950/20 border-rose-500/30' : 'bg-slate-900/60 border-slate-800'
+                  className={`p-3.5 rounded-xl border text-xs flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                    u.isSuspicious ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50/60 border-slate-200'
                   }`}
                 >
                   <div className="space-y-1 overflow-hidden">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-slate-200 truncate max-w-[400px]">
+                      <span className="font-mono font-bold text-slate-900 truncate max-w-[420px]">
                         {u.defanged}
                       </span>
                       {u.isSuspicious && (
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                          SUSPICIOUS
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                          SUSPICIOUS LINK
                         </span>
                       )}
                     </div>
                     {u.flags.length > 0 && (
                       <div className="space-y-0.5">
                         {u.flags.map((flag, fIdx) => (
-                          <div key={fIdx} className="text-[11px] text-rose-300 font-mono flex items-center gap-1">
+                          <div key={fIdx} className="text-xs text-rose-700 font-medium flex items-center gap-1">
                             <span>⚠</span> <span>{flag}</span>
                           </div>
                         ))}
@@ -111,10 +111,10 @@ export default function IoCVault({ iocs }) {
 
                   <button
                     onClick={() => copyToClipboard(u.original, `url-${i}`)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300 shrink-0 transition"
-                    title="Copy original URL"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs shrink-0 transition"
+                    title="Copy original link"
                   >
-                    {copiedKey === `url-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === `url-${i}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                     <span>{copiedKey === `url-${i}` ? 'Copied' : 'Copy'}</span>
                   </button>
                 </div>
@@ -126,48 +126,48 @@ export default function IoCVault({ iocs }) {
 
       {/* Tab 2: Attachments */}
       {activeTab === 'attachments' && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {attachments.length === 0 ? (
-            <div className="p-6 text-center text-xs font-mono text-slate-500">
-              No file attachments found in this message.
+            <div className="p-8 text-center text-xs font-medium text-slate-400 bg-slate-50 rounded-xl">
+              No attachments present in this email message.
             </div>
           ) : (
-            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
               {attachments.map((att, i) => (
                 <div 
                   key={i} 
-                  className={`p-3 rounded-lg border text-xs ${
-                    att.isDangerous ? 'bg-rose-950/25 border-rose-500/40' : 'bg-slate-900/60 border-slate-800'
+                  className={`p-3.5 rounded-xl border text-xs ${
+                    att.isDangerous ? 'bg-rose-50/70 border-rose-300 shadow-xs' : 'bg-slate-50/70 border-slate-200'
                   }`}
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Paperclip className={`w-4 h-4 ${att.isDangerous ? 'text-rose-400' : 'text-cyan-400'}`} />
-                      <span className="font-mono font-bold text-slate-100">{att.filename}</span>
-                      <span className="text-slate-500 font-mono text-[11px]">({Math.round(att.size / 1024)} KB)</span>
+                      <Paperclip className={`w-4 h-4 ${att.isDangerous ? 'text-rose-600' : 'text-purple-600'}`} />
+                      <span className="font-bold text-slate-900">{att.filename}</span>
+                      <span className="text-slate-500 text-xs">({Math.round(att.size / 1024)} KB)</span>
                       {att.isDangerous && (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">
-                          HIGH RISK PAYLOAD
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white shadow-2xs">
+                          HIGH RISK FILE EXTENSION
                         </span>
                       )}
                     </div>
 
                     <button
                       onClick={() => copyToClipboard(att.sha256, `sha-${i}`)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-slate-300 shrink-0 transition"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-2xs shrink-0 transition"
                       title="Copy SHA-256 hash"
                     >
-                      {copiedKey === `sha-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      {copiedKey === `sha-${i}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                       <span>Copy SHA-256</span>
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-800/80 font-mono text-[11px]">
-                    <div className="truncate text-slate-400">
-                      SHA256: <span className="text-cyan-300 select-all">{att.sha256}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2.5 pt-2.5 border-t border-slate-200/80 font-mono text-xs">
+                    <div className="truncate text-slate-500">
+                      SHA256: <span className="text-slate-800 font-semibold select-all">{att.sha256}</span>
                     </div>
-                    <div className="truncate text-slate-400">
-                      MD5: <span className="text-cyan-300 select-all">{att.md5}</span>
+                    <div className="truncate text-slate-500">
+                      MD5: <span className="text-slate-800 font-semibold select-all">{att.md5}</span>
                     </div>
                   </div>
                 </div>
@@ -181,17 +181,17 @@ export default function IoCVault({ iocs }) {
       {activeTab === 'ips' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* IPs */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-mono uppercase text-slate-400 block">Extracted Transmission IPs:</span>
-            <div className="space-y-1 max-h-[220px] overflow-y-auto">
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Extracted Transmission IPs:</span>
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
               {ips.map((ip, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 text-xs font-mono">
-                  <span className="text-cyan-300">{ip}</span>
+                <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
+                  <span className="text-slate-800 font-semibold">{ip}</span>
                   <button
                     onClick={() => copyToClipboard(ip, `ip-${i}`)}
-                    className="p-1 text-slate-400 hover:text-slate-200"
+                    className="p-1 text-slate-400 hover:text-slate-700"
                   >
-                    {copiedKey === `ip-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === `ip-${i}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               ))}
@@ -199,17 +199,17 @@ export default function IoCVault({ iocs }) {
           </div>
 
           {/* Domains */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-mono uppercase text-slate-400 block">Extracted Host Domains:</span>
-            <div className="space-y-1 max-h-[220px] overflow-y-auto">
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">Extracted Domains:</span>
+            <div className="space-y-1.5 max-h-[220px] overflow-y-auto">
               {domains.map((dom, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 text-xs font-mono">
-                  <span className="text-slate-300">{dom}</span>
+                <div key={i} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono">
+                  <span className="text-slate-800 font-semibold">{dom}</span>
                   <button
                     onClick={() => copyToClipboard(dom, `dom-${i}`)}
-                    className="p-1 text-slate-400 hover:text-slate-200"
+                    className="p-1 text-slate-400 hover:text-slate-700"
                   >
-                    {copiedKey === `dom-${i}` ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    {copiedKey === `dom-${i}` ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               ))}

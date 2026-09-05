@@ -10,7 +10,7 @@ import HeaderInspector from './components/HeaderInspector';
 import ForensicReportModal from './components/ForensicReportModal';
 import EmailInputModal from './components/EmailInputModal';
 import { API_BASE_URL } from './config';
-import { Shield, Loader2, AlertCircle, RefreshCw, Radio } from 'lucide-react';
+import { Shield, Loader2, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
   const [samples, setSamples] = useState([]);
@@ -27,28 +27,25 @@ export default function App() {
   useEffect(() => {
     async function init() {
       try {
-        // Fetch health & model status
         const healthRes = await fetch(`${API_BASE_URL}/api/health`);
         if (healthRes.ok) {
           const healthData = await healthRes.json();
           if (healthData.primaryModel) setOpenrouterModel(healthData.primaryModel);
         }
 
-        // Fetch threat sample datasets
         const samplesRes = await fetch(`${API_BASE_URL}/api/samples`);
         if (samplesRes.ok) {
           const samplesData = await samplesRes.json();
           const list = samplesData.samples || [];
           setSamples(list);
 
-          // Auto-load first sample (BEC Wire Transfer)
           if (list.length > 0) {
             loadAndAnalyzeSample(list[0].id);
           }
         }
       } catch (err) {
         console.error('Initialization error:', err);
-        setError('Failed to connect to backend forensic server. Ensure API is running on port 5001.');
+        setError('Failed to connect to forensic backend API. Please check your network connection.');
       }
     }
 
@@ -61,12 +58,10 @@ export default function App() {
     setSelectedSampleId(sampleId);
 
     try {
-      // Fetch sample raw content
       const res = await fetch(`${API_BASE_URL}/api/samples/${sampleId}`);
       if (!res.ok) throw new Error('Failed to load sample dataset');
       const sample = await res.json();
 
-      // Analyze email
       await runAnalysis(sample.rawEmail);
     } catch (err) {
       console.error('Sample analysis error:', err);
@@ -103,9 +98,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070a12] text-slate-100 font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       
-      {/* Top Application Header */}
+      {/* Top Navigation Header */}
       <Header
         samples={samples}
         selectedSampleId={selectedSampleId}
@@ -116,19 +111,19 @@ export default function App() {
         openrouterModel={openrouterModel}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Dashboard */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
         
         {/* Error Alert */}
         {error && (
-          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono flex items-center justify-between shadow-lg">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
               <span>{error}</span>
             </div>
             <button
               onClick={() => selectedSampleId && loadAndAnalyzeSample(selectedSampleId)}
-              className="px-2.5 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 text-xs transition"
+              className="px-3 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold transition"
             >
               Retry
             </button>
@@ -137,13 +132,15 @@ export default function App() {
 
         {/* Loading State Overlay */}
         {isAnalyzing && (
-          <div className="p-8 rounded-xl glass-panel text-center flex flex-col items-center justify-center space-y-3 glow-border-cyan">
-            <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-            <div className="font-mono text-sm font-bold text-cyan-300">
-              EXECUTING DEEP FORENSIC THREAT PIPELINE...
+          <div className="p-10 rounded-2xl bg-white border border-slate-200 shadow-sm text-center flex flex-col items-center justify-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
+              <Loader2 className="w-6 h-6 animate-spin" />
             </div>
-            <p className="text-xs text-slate-400 font-mono">
-              Parsing RFC MIME structure &bull; Tracing SMTP relay hops &bull; Geocoding IP origin &bull; OpenRouter LLM Evaluation
+            <div className="text-base font-bold text-slate-900">
+              Analyzing Email Threat Telemetry...
+            </div>
+            <p className="text-xs text-slate-500 max-w-md leading-relaxed">
+              Tracing server hops &bull; Geocoding sender origin &bull; Checking authentication &bull; OpenRouter AI evaluation
             </p>
           </div>
         )}
@@ -151,10 +148,10 @@ export default function App() {
         {/* Dashboard Panels (when dossier is ready) */}
         {!isAnalyzing && dossier && (
           <>
-            {/* 1. Primary Threat Score & Incident Attribution */}
+            {/* 1. Threat Score & Summary Card */}
             <ThreatScoreCard dossier={dossier} />
 
-            {/* 2. Interactive Geo Relay Map & Relay Hop Timeline */}
+            {/* 2. Interactive Map & Server Hop Timeline */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-7">
                 <GeoRelayMap relay={dossier.relay} originGeo={dossier.originGeo} />
@@ -164,16 +161,16 @@ export default function App() {
               </div>
             </div>
 
-            {/* 3. AI Forensic Intelligence & Social Engineering Analysis */}
+            {/* 3. AI Security Analysis & Deception Detection */}
             <AIIntelligenceCard aiThreatIntelligence={dossier.aiThreatIntelligence} />
 
-            {/* 4. Sender Authentication Matrix (SPF, DKIM, DMARC, Spoofing, Lookalikes) */}
+            {/* 4. Sender Identity & Authentication Verifications */}
             <AuthMatrix authentication={dossier.authentication} envelope={dossier.envelope} />
 
             {/* 5. Indicators of Compromise (IoC) Vault */}
             <IoCVault iocs={dossier.iocs} />
 
-            {/* 6. Raw RFC 5322 Header Explorer */}
+            {/* 6. Raw RFC 5322 Technical Headers Explorer */}
             <HeaderInspector 
               headerLines={dossier.headerLines} 
               rawHeaders={dossier.rawHeaders} 
@@ -184,19 +181,19 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950/80 px-4 py-4 text-center text-xs font-mono text-slate-500">
+      <footer className="border-t border-slate-200 bg-white px-4 py-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>AEGIS // Digital Forensics & Incident Response Platform</span>
+          <div className="flex items-center gap-2 text-slate-600">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>AegisMail &bull; Email Threat Intelligence & Incident Response</span>
           </div>
-          <div>
-            Integrity Hash: <span className="text-cyan-400">{dossier?.integrity?.sha256?.slice(0, 16) || 'N/A'}...</span>
+          <div className="font-mono text-[11px] text-slate-400">
+            Integrity Hash: <span className="text-blue-600 font-semibold">{dossier?.integrity?.sha256?.slice(0, 16) || 'N/A'}...</span>
           </div>
         </div>
       </footer>
 
-      {/* Upload / Ingest Modal */}
+      {/* Upload Modal */}
       <EmailInputModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
@@ -204,7 +201,7 @@ export default function App() {
         isAnalyzing={isAnalyzing}
       />
 
-      {/* Forensic Report Dossier Modal */}
+      {/* Forensic Report Modal */}
       <ForensicReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { GitCommit, ArrowRight, Lock, Unlock, Server, Clock, ShieldAlert, Eye, ChevronDown, ChevronUp } from 'lucide-react';
+import { GitCommit, ArrowRight, Lock, Unlock, Server, Clock, ChevronDown, ChevronUp, ShieldCheck } from 'lucide-react';
 
 export default function RelayTimeline({ relay }) {
   const [expandedHop, setExpandedHop] = useState(null);
 
   if (!relay || !relay.hops || relay.hops.length === 0) {
     return (
-      <div className="glass-panel p-5 text-center text-slate-400 text-xs font-mono">
+      <div className="app-card p-6 text-center text-slate-400 text-xs font-medium">
         No Received: header hops detected in email.
       </div>
     );
@@ -15,26 +15,26 @@ export default function RelayTimeline({ relay }) {
   const hops = relay.hops;
 
   return (
-    <div className="glass-panel p-4 space-y-3">
+    <div className="app-card p-5 space-y-3.5 bg-white border-slate-200">
       
       {/* Title */}
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20">
-            <GitCommit className="w-4 h-4" />
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-purple-50 text-purple-600 border border-purple-100">
+            <GitCommit className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono">
-              SMTP Relay Hop Chain & Transmission Timeline
+            <h3 className="text-base font-bold text-slate-900 tracking-tight">
+              Server Relay Sequence
             </h3>
-            <p className="text-[11px] text-slate-400">
-              Reconstructed chronological server hops from originating client MTA to final destination MX
+            <p className="text-xs text-slate-500">
+              Step-by-step route hops from sender's device to destination mailbox
             </p>
           </div>
         </div>
 
-        <span className="text-xs font-mono px-2.5 py-1 rounded bg-slate-900 border border-slate-700 text-slate-300">
-          {hops.length} Sequential Hops
+        <span className="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+          {hops.length} Hops Chain
         </span>
       </div>
 
@@ -48,68 +48,64 @@ export default function RelayTimeline({ relay }) {
           return (
             <div 
               key={hop.hopNumber} 
-              className={`p-3 rounded-lg border transition-all ${
+              className={`p-3.5 rounded-xl border transition-all ${
                 isOrigin 
-                  ? 'bg-rose-950/20 border-rose-500/40 shadow-sm' 
-                  : (isFinal ? 'bg-purple-950/20 border-purple-500/30' : 'bg-slate-900/50 border-slate-800 hover:border-slate-700')
+                  ? 'bg-rose-50/50 border-rose-200 shadow-xs' 
+                  : (isFinal ? 'bg-purple-50/50 border-purple-200' : 'bg-slate-50/70 border-slate-200 hover:border-slate-300')
               }`}
             >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 
                 {/* Hop Identifier & Status Badge */}
                 <div className="flex items-center gap-3 shrink-0">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono font-bold text-xs ${
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs ${
                     isOrigin 
-                      ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30' 
-                      : (isFinal ? 'bg-purple-600 text-white' : 'bg-slate-800 text-cyan-300 border border-slate-700')
+                      ? 'bg-rose-600 text-white shadow-xs' 
+                      : (isFinal ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white')
                   }`}>
                     #{hop.hopNumber}
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-slate-200">
-                        {hop.ip || 'No IP in header'}
+                      <span className="font-mono text-xs font-bold text-slate-900">
+                        {hop.ip || 'Direct Host'}
                       </span>
 
-                      {hop.isPrivate ? (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300">
-                          RFC 1918 Private IP
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-300">
-                          Public IP
-                        </span>
-                      )}
-
                       {isOrigin && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 font-bold animate-pulse">
-                          ORIGINATING HOST
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 uppercase">
+                          Sender Origin
                         </span>
                       )}
 
                       {isFinal && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-500/20 border border-purple-500/40 text-purple-300 font-bold">
-                          DESTINATION MX
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 uppercase">
+                          Destination MX
+                        </span>
+                      )}
+
+                      {hop.isPrivate && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                          Internal Network
                         </span>
                       )}
                     </div>
 
-                    <div className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
-                      <span>{hop.geo?.city || 'Unknown'}, {hop.geo?.country || 'Unknown'}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-slate-400 truncate max-w-[200px]">{hop.geo?.isp || 'Unknown ISP'}</span>
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                      <span>📍 {hop.geo?.city || 'Unknown'}, {hop.geo?.country || 'Unknown'}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-500 truncate max-w-[180px]">{hop.geo?.isp || 'Standard Carrier'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* MTA Transition: From -> By */}
-                <div className="flex items-center gap-2 text-xs font-mono text-slate-300 bg-slate-950/60 px-3 py-1.5 rounded border border-slate-800/80 overflow-hidden text-ellipsis">
-                  <span className="text-slate-400 truncate max-w-[140px]" title={hop.fromHost}>
+                <div className="flex items-center gap-1.5 text-xs font-mono text-slate-700 bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 overflow-hidden text-ellipsis shadow-2xs">
+                  <span className="text-slate-500 truncate max-w-[120px]" title={hop.fromHost}>
                     {hop.fromHost}
                   </span>
-                  <ArrowRight className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                  <span className="text-cyan-300 truncate max-w-[140px]" title={hop.byHost}>
+                  <ArrowRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                  <span className="text-blue-700 font-semibold truncate max-w-[120px]" title={hop.byHost}>
                     {hop.byHost}
                   </span>
                 </div>
@@ -117,33 +113,31 @@ export default function RelayTimeline({ relay }) {
                 {/* Security & Transit Delay Badges */}
                 <div className="flex items-center gap-2 shrink-0">
                   {/* Protocol / TLS status */}
-                  <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-950 border border-slate-800 text-[11px] font-mono">
+                  <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-xs font-semibold">
                     {hop.tlsCipher ? (
                       <>
-                        <Lock className="w-3 h-3 text-emerald-400" />
-                        <span className="text-emerald-300 truncate max-w-[100px]" title={hop.tlsCipher}>
-                          {hop.protocol || 'TLS'}
-                        </span>
+                        <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                        <span className="text-emerald-700">Encrypted</span>
                       </>
                     ) : (
                       <>
-                        <Unlock className="w-3 h-3 text-amber-400" />
-                        <span className="text-amber-400">{hop.protocol || 'PLAINTEXT'}</span>
+                        <Unlock className="w-3.5 h-3.5 text-amber-600" />
+                        <span className="text-amber-700">Plaintext</span>
                       </>
                     )}
                   </div>
 
                   {/* Delay Delta */}
-                  <div className="flex items-center gap-1 px-2 py-1 rounded bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300">
-                    <Clock className="w-3 h-3 text-cyan-400" />
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs text-slate-600 font-medium">
+                    <Clock className="w-3 h-3 text-slate-400" />
                     <span>+{hop.transitDelaySeconds ?? 0}s</span>
                   </div>
 
-                  {/* Expand / Raw Toggle */}
+                  {/* Expand Toggle */}
                   <button
                     onClick={() => setExpandedHop(isExpanded ? null : hop.hopNumber)}
-                    className="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition"
-                    title="View Raw Received Header Line"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                    title="View Raw Header Line"
                   >
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -151,18 +145,18 @@ export default function RelayTimeline({ relay }) {
 
               </div>
 
-              {/* Collapsible Raw Header Details */}
+              {/* Collapsible Raw Header */}
               {isExpanded && (
-                <div className="mt-3 pt-3 border-t border-slate-800/80 text-[11px] font-mono text-slate-300 bg-slate-950 p-2.5 rounded">
-                  <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">
-                    Raw RFC Received Header:
+                <div className="mt-3 pt-3 border-t border-slate-200/80 text-xs font-mono text-slate-700 bg-white p-3 rounded-lg border border-slate-100 shadow-inner">
+                  <div className="text-[11px] text-slate-400 font-bold uppercase mb-1">
+                    Raw Received Header Content:
                   </div>
-                  <div className="break-all whitespace-pre-wrap select-all text-slate-300">
+                  <div className="break-all whitespace-pre-wrap select-all text-slate-800 leading-relaxed">
                     {hop.rawText}
                   </div>
                   {hop.timestampISO && (
-                    <div className="mt-2 text-slate-400 text-[10px]">
-                      Timestamp: <span className="text-cyan-400">{hop.timestampISO}</span>
+                    <div className="mt-2 text-slate-500 text-[11px]">
+                      Hop Timestamp: <span className="text-blue-600 font-semibold">{hop.timestampISO}</span>
                     </div>
                   )}
                 </div>
