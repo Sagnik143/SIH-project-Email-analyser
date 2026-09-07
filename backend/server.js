@@ -2,16 +2,19 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
-import { parseEmail } from './services/emailParser.js';
-import { traceRelayHops } from './services/relayTracer.js';
-import { lookupIP, calculateDistanceKm } from './services/geoService.js';
-import { validateAuthentication } from './services/authValidator.js';
-import { extractIoCs } from './services/iocExtractor.js';
-import { analyzeEmailThreatWithAI } from './services/aiThreatEngine.js';
-import { analyzeAttributionAndGraph } from './services/attributionEngine.js';
+import { analyzeEmail } from './services/investigationEngine.js';
+import { findRelatedCases, findRelatedEmails } from './services/correlationEngine.js';
 import { SAMPLE_EMAILS } from './data/samples.js';
+import { initDatabase } from './db/database.js';
+import { createCase, listCases, getCaseById, saveEmailAndAnalysisToCase, logReportExport, getReportsForCase, findReportByUuid } from './db/caseRepository.js';
+import { getDb } from './db/database.js';
+import { generateChainOfCustodyCertificate, generateHtmlReport, generateJsonReport, generateForensicHtmlReport, generateCanonicalJsonExport } from './services/reportGeneratorService.js';
+import { verifyReportIntegrity } from './services/reportVerificationService.js';
 
 dotenv.config();
+
+// Initialize SQLite database idempotently
+initDatabase();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -29,13 +32,12 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     timestamp: new Date().toISOString(),
-    engine: 'Email Threat Forensic Intelligence Engine v1.0',
+    service: 'AegisMail DFIR Threat Intelligence API',
     problemStatementId: 26106,
     problemTitle: 'AI-Powered Email Threat Detection, GeoLocation and Forensic Intelligence Platform',
     organization: 'All India Council for Technical Education (Cyber Security Cell)',
-    openrouterKeyConfigured: !!(process.env.EXPLABS_API_KEY || process.env.OPENROUTER_API_KEY),
-    aiKeyConfigured: !!process.env.EXPLABS_API_KEY,
-    primaryModel: process.env.AI_MODEL || process.env.OPENROUTER_MODEL || 'gpt-6-astra'
+    aiEngineStatus: 'active',
+    analysisPipeline: 'ready'
   });
 });
 
@@ -59,7 +61,12 @@ app.get('/api/samples/:id', (req, res) => {
   res.json(sample);
 });
 
-// Primary Forensic Analysis Endpoint
+// Reusable Forensic Pipeline Execution (Canonical Investigation Engine Wrapper)
+export async function runForensicPipeline(rawContent, options = {}) {
+  return analyzeEmail(rawContent, options);
+}
+
+// Primary Forensic Analysis Endpoint (Stateless Backward Compatibility)
 app.post('/api/analyze', upload.single('emailFile'), async (req, res) => {
   try {
     let rawContent = '';
@@ -76,141 +83,424 @@ app.post('/api/analyze', upload.single('emailFile'), async (req, res) => {
       return res.status(400).json({ error: 'Email content cannot be empty' });
     }
 
-    console.log(`[Analyzer] Processing email (${Buffer.byteLength(rawContent)} bytes)...`);
-
-    // 1. Ingest and parse email structure
-    const parsedEmail = await parseEmail(rawContent);
-
-    // 2. Trace relay hops from Received: headers
-    const relayData = traceRelayHops(parsedEmail.headers, parsedEmail.headerLines);
-
-    // 3. Geolocation & IP resolution for each hop
-    const enrichedHops = relayData.hops.map((hop) => {
-      const geo = lookupIP(hop.ip);
-      return {
-        ...hop,
-        geo
-      };
-    });
-
-    // Determine originating IP & its Geo
-    const originatingIP = relayData.originatingIP;
-    const originGeo = lookupIP(originatingIP);
-
-    // 4. Trace route trajectory and calculate hop distances / impossible travel
-    const trajectory = [];
-    const hopAnomalies = [];
-
-    for (let i = 0; i < enrichedHops.length; i++) {
-      const hop = enrichedHops[i];
-      if (hop.geo && hop.geo.resolved && hop.geo.latitude !== 0) {
-        trajectory.push({
-          hopNumber: hop.hopNumber,
-          ip: hop.ip,
-          hostname: hop.fromHost,
-          city: hop.geo.city,
-          country: hop.geo.country,
-          countryCode: hop.geo.countryCode,
-          lat: hop.geo.latitude,
-          lon: hop.geo.longitude,
-          delaySeconds: hop.transitDelaySeconds,
-          isOrigin: hop.isOriginHop || hop.ip === originatingIP
-        });
-      }
-
-      // Check impossible travel between hop i-1 and hop i
-      if (i > 0) {
-        const prev = enrichedHops[i - 1];
-        const curr = enrichedHops[i];
-        if (prev.geo?.latitude && curr.geo?.latitude) {
-          const distKm = calculateDistanceKm(prev.geo.latitude, prev.geo.longitude, curr.geo.latitude, curr.geo.longitude);
-          const delaySec = curr.transitDelaySeconds || 0;
-          // If distance > 1000km and delay < 5 seconds, flag as anomalous physical transit
-          if (distKm > 1000 && delaySec > 0 && delaySec < 5) {
-            hopAnomalies.push({
-              fromHop: prev.hopNumber,
-              toHop: curr.hopNumber,
-              distanceKm: distKm,
-              delaySeconds: delaySec,
-              speedKmPerSec: Math.round(distKm / delaySec),
-              alert: `Impossible transit speed: ${distKm}km traversed in only ${delaySec}s between ${prev.geo.city} and ${curr.geo.city}`
-            });
-          }
-        }
-      }
-    }
-
-    const relayAnalysis = {
-      ...relayData,
-      hops: enrichedHops,
-      originGeo,
-      trajectory,
-      hopAnomalies
-    };
-
-    // 5. Sender Authentication & Domain Lookalike Validation
-    const authData = validateAuthentication({
-      ...parsedEmail,
-      relay: relayAnalysis
-    });
-
-    // 6. Indicators of Compromise (IoC) Extraction
-    const iocData = extractIoCs({
-      ...parsedEmail,
-      relay: relayAnalysis
-    });
-
-    // 7. AI Threat Intelligence Assessment (ExperientialLabs GPT-6 Astra)
-    const aiAssessment = await analyzeEmailThreatWithAI(
-      parsedEmail,
-      relayAnalysis,
-      authData,
-      iocData,
-      originGeo
-    );
-
-    // 8. Identity Correlation, Attribution & Graph Relationship Engine (AICTE 26106)
-    const attributionAndGraph = analyzeAttributionAndGraph(
-      parsedEmail,
-      relayAnalysis,
-      authData,
-      iocData,
-      originGeo,
-      aiAssessment
-    );
-
-    // 9. Assemble unified forensic dossier
-    const forensicDossier = {
-      dossierId: `DFIR-AICTE-26106-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-      problemStatementId: 26106,
-      timestamp: new Date().toISOString(),
-      integrity: parsedEmail.integrity,
-      envelope: parsedEmail.envelope,
-      bodySnippet: parsedEmail.body.snippet,
-      bodyText: parsedEmail.body.text,
-      bodyHtml: parsedEmail.body.html,
-      attachments: parsedEmail.attachments,
-      relay: relayAnalysis,
-      originGeo,
-      authentication: authData,
-      iocs: iocData,
-      aiThreatIntelligence: aiAssessment,
-      attributionAndGraph,
-      rawHeaders: parsedEmail.headers,
-      headerLines: parsedEmail.headerLines
-    };
-
-    console.log(`[Analyzer] Analysis complete: Risk ${aiAssessment.riskScore}/100 [${aiAssessment.threatClassification}]`);
-    res.json(forensicDossier);
+    const forensicDossier = await runForensicPipeline(rawContent);
+    console.log(`[Analyzer] Analysis complete: Risk ${forensicDossier.aiThreatIntelligence?.riskScore}/100`);
+    res.json(sanitizeResponsePayload(forensicDossier));
 
   } catch (error) {
-    console.error('[Analyzer] Analysis error:', error);
+    console.error('[Analyzer] Unexpected analysis error:', error);
     res.status(500).json({
       error: 'Failed to complete forensic email analysis',
-      message: error.message
+      message: error.message || 'An unexpected processing error occurred. Please try again later.'
     });
   }
 });
+
+// ============================================================
+// PHASE 3: CASE MANAGEMENT API ENDPOINTS
+// ============================================================
+
+// Create Case
+app.post('/api/cases', (req, res) => {
+  try {
+    const { title, status } = req.body || {};
+    const newCase = createCase({ title, status });
+    console.log(`[Cases] Created case ${newCase.caseNumber}: "${newCase.title}"`);
+    res.status(201).json(newCase);
+  } catch (err) {
+    console.error('[Cases] Error creating case:', err);
+    res.status(500).json({ error: 'Failed to create case', message: 'Unable to process case creation.' });
+  }
+});
+
+// List Cases
+app.get('/api/cases', (req, res) => {
+  try {
+    const cases = listCases();
+    res.json({ cases });
+  } catch (err) {
+    console.error('[Cases] Error listing cases:', err);
+    res.status(500).json({ error: 'Failed to list cases', message: 'Unable to retrieve cases.' });
+  }
+});
+
+// Get Case By ID or Case Number
+app.get('/api/cases/:id', (req, res) => {
+  try {
+    const caseData = getCaseById(req.params.id);
+    if (!caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    res.json(caseData);
+  } catch (err) {
+    console.error('[Cases] Error fetching case:', err);
+    res.status(500).json({ error: 'Failed to fetch case', message: 'Unable to retrieve case details.' });
+  }
+});
+
+// Upload and Analyze Email directly into a Case
+app.post('/api/cases/:id/emails', upload.single('emailFile'), async (req, res) => {
+  try {
+    let rawContent = '';
+    let filename = 'uploaded_email.eml';
+
+    if (req.file) {
+      rawContent = req.file.buffer.toString('utf-8');
+      filename = req.file.originalname || filename;
+    } else if (req.body.rawEmail) {
+      rawContent = req.body.rawEmail;
+      filename = req.body.filename || filename;
+    } else {
+      return res.status(400).json({ error: 'No raw email or file provided' });
+    }
+
+    if (!rawContent || rawContent.trim().length === 0) {
+      return res.status(400).json({ error: 'Email content cannot be empty' });
+    }
+
+    // Run deterministic analysis
+    const forensicDossier = await runForensicPipeline(rawContent);
+
+    // Persist to database inside transaction
+    const updatedCase = saveEmailAndAnalysisToCase(
+      req.params.id,
+      { filename, rawEmail: rawContent },
+      forensicDossier
+    );
+
+    console.log(`[Cases] Successfully attached email to case ${req.params.id} (SHA256: ${forensicDossier.integrity?.sha256?.slice(0, 16)}...)`);
+    res.status(201).json({
+      case: updatedCase,
+      dossier: sanitizeResponsePayload(forensicDossier)
+    });
+  } catch (err) {
+    console.error('[Cases] Error attaching email to case:', err);
+    if (err.message && err.message.includes('not found')) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    res.status(500).json({
+      error: 'Failed to attach email to case',
+      message: 'An error occurred while saving analysis to case.'
+    });
+  }
+});
+
+// Associate existing analysis dossier to an existing case
+app.post('/api/cases/:id/save-analysis', (req, res) => {
+  try {
+    const { rawEmail, dossier, filename = 'analyzed_email.eml' } = req.body || {};
+    if (!rawEmail || !dossier) {
+      return res.status(400).json({ error: 'Missing rawEmail or analysis dossier payload' });
+    }
+
+    const updatedCase = saveEmailAndAnalysisToCase(
+      req.params.id,
+      { filename, rawEmail },
+      dossier
+    );
+
+    console.log(`[Cases] Saved existing analysis to case ${req.params.id}`);
+    res.json({ case: updatedCase });
+  } catch (err) {
+    console.error('[Cases] Error saving existing analysis to case:', err);
+    if (err.message && err.message.includes('not found')) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    res.status(500).json({
+      error: 'Failed to save analysis to case',
+      message: 'Unable to associate analysis with case.'
+    });
+  }
+});
+
+// ============================================================
+// PHASE 5: RELATED INCIDENTS API ENDPOINTS
+// ============================================================
+
+// Discover potentially related incidents for a case
+app.get('/api/cases/:id/related', (req, res) => {
+  try {
+    const relatedData = findRelatedCases(req.params.id);
+    res.json(sanitizeResponsePayload(relatedData));
+  } catch (err) {
+    console.error('[RelatedIncidents] Error discovering related cases:', err);
+    if (err.message && err.message.includes('not found')) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    res.status(500).json({
+      error: 'Failed to retrieve related incidents',
+      message: 'An error occurred during correlation analysis.'
+    });
+  }
+});
+
+// Discover potentially related incidents for a specific email
+app.get('/api/emails/:id/related', (req, res) => {
+  try {
+    const relatedData = findRelatedEmails(req.params.id);
+    res.json(sanitizeResponsePayload(relatedData));
+  } catch (err) {
+    console.error('[RelatedIncidents] Error discovering related emails:', err);
+    if (err.message && err.message.includes('not found')) {
+      return res.status(404).json({ error: 'Email not found' });
+    }
+    res.status(500).json({
+      error: 'Failed to retrieve related incidents for email',
+      message: 'An error occurred during email correlation.'
+    });
+  }
+});
+
+// ============================================================
+// PHASE 7: FORENSIC REPORTING & CHAIN-OF-CUSTODY EXPORTS
+// ============================================================
+
+// Helper to rebuild dossier for a case from its persisted records or raw EML
+async function buildCaseDossier(caseIdOrNumber) {
+  const caseData = getCaseById(caseIdOrNumber);
+  if (!caseData) return null;
+
+  const db = getDb();
+  const primaryEmail = caseData.emails[0] || null;
+
+  let rawEmail = null;
+  if (primaryEmail) {
+    const rawRow = db.prepare(`SELECT raw_email FROM emails WHERE id = ?`).get(primaryEmail.id);
+    if (rawRow?.raw_email) {
+      rawEmail = rawRow.raw_email;
+    }
+  }
+
+  let dossier;
+  if (rawEmail) {
+    dossier = await analyzeEmail(rawEmail);
+  } else {
+    // Fallback minimal dossier from persisted records
+    dossier = {
+      caseId: caseData.case.id,
+      caseNumber: caseData.case.caseNumber,
+      metadata: {
+        subject: primaryEmail?.subject,
+        from: primaryEmail?.sender,
+        to: primaryEmail?.recipient,
+        date: primaryEmail?.received_at
+      },
+      hashes: { sha256: primaryEmail?.sha256 || 'NOT_AVAILABLE' },
+      evidence: caseData.evidence || [],
+      findings: caseData.findings || [],
+      risk: { score: 0, level: 'LOW' }
+    };
+  }
+
+  dossier.caseId = caseData.case.id;
+  dossier.caseNumber = caseData.case.caseNumber;
+  return { caseData, primaryEmail, dossier };
+}
+
+// Export canonical, tamper-sealed JSON dossier for a case
+app.get('/api/cases/:id/export/json', async (req, res) => {
+  try {
+    const built = await buildCaseDossier(req.params.id);
+    if (!built) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    const { caseData, primaryEmail, dossier } = built;
+    const { certificate, exportPayload } = generateCanonicalJsonExport(dossier, {
+      caseId: caseData.case.id,
+      caseNumber: caseData.case.caseNumber,
+      emailId: primaryEmail?.id,
+      rawSha256: primaryEmail?.sha256
+    });
+
+    // Log export audit
+    try {
+      logReportExport(caseData.case.id, primaryEmail?.id, {
+        reportUuid: certificate.certificateId.replace(/^CERT-/, ''),
+        reportTitle: `Forensic Dossier Export - Case ${caseData.case.caseNumber}`,
+        exportFormat: 'json',
+        rawSha256: certificate.acquisition.rawSha256,
+        dossierSha256: certificate.integritySeal.dossierDigest,
+        metadata: { examiner: certificate.examiner, findingsCount: certificate.evidenceSummary.totalFindings }
+      });
+    } catch (logErr) {
+      console.warn('[Reporting] Failed to log report export:', logErr.message);
+    }
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${caseData.case.caseNumber}-forensic-report.json"`);
+    res.json(sanitizeResponsePayload(exportPayload));
+  } catch (err) {
+    console.error('[Reporting] Error generating JSON export:', err);
+    res.status(500).json({ error: 'Failed to generate forensic JSON export', message: err.message });
+  }
+});
+
+// Export tamper-evident standalone forensic HTML report for a case
+app.get('/api/cases/:id/export/html', async (req, res) => {
+  try {
+    const built = await buildCaseDossier(req.params.id);
+    if (!built) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+
+    const { caseData, primaryEmail, dossier } = built;
+    const certificateObj = generateChainOfCustodyCertificate(dossier, {
+      caseId: caseData.case.id,
+      caseNumber: caseData.case.caseNumber,
+      emailId: primaryEmail?.id,
+      rawSha256: primaryEmail?.sha256
+    });
+    const certificate = certificateObj.certificate;
+
+    const htmlContent = generateHtmlReport(dossier, {
+      caseId: caseData.case.id,
+      caseNumber: caseData.case.caseNumber,
+      emailId: primaryEmail?.id,
+      rawSha256: primaryEmail?.sha256
+    });
+
+    // Log export audit
+    try {
+      logReportExport(caseData.case.id, primaryEmail?.id, {
+        reportUuid: certificate.certificateId.replace(/^CERT-/, ''),
+        reportTitle: `Forensic HTML Report - Case ${caseData.case.caseNumber}`,
+        exportFormat: 'html',
+        rawSha256: certificate.acquisition.sha256,
+        dossierSha256: certificate.dossierIntegrity.digest,
+        metadata: { examiner: certificate.examiner, findingsCount: certificate.findingItemCount }
+      });
+    } catch (logErr) {
+      console.warn('[Reporting] Failed to log report export:', logErr.message);
+    }
+
+    if (req.query.download === 'true') {
+      res.setHeader('Content-Disposition', `attachment; filename="${caseData.case.caseNumber}-forensic-report.html"`);
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(htmlContent);
+  } catch (err) {
+    console.error('[Reporting] Error generating HTML export:', err);
+    res.status(500).json({ error: 'Failed to generate forensic HTML report', message: err.message });
+  }
+});
+
+// Generate and return certified HTML directly from in-memory dossier payload
+app.post('/api/reports/export/html', (req, res) => {
+  try {
+    const { dossier, options = {} } = req.body;
+    if (!dossier) {
+      return res.status(400).json({ error: 'Missing dossier in request body' });
+    }
+
+    const certificate = generateChainOfCustodyCertificate(dossier, options);
+    const htmlContent = generateForensicHtmlReport(dossier, certificate);
+
+    if (dossier.caseId) {
+      try {
+        logReportExport(dossier.caseId, dossier.emailId || null, {
+          reportUuid: certificate.certificateId.replace(/^CERT-/, ''),
+          reportTitle: `Interactive Forensic Report - ${dossier.caseNumber || 'Session'}`,
+          exportFormat: 'html',
+          rawSha256: certificate.acquisition.rawSha256,
+          dossierSha256: certificate.integritySeal.dossierDigest,
+          metadata: { examiner: certificate.examiner }
+        });
+      } catch (e) {}
+    }
+
+    res.json({
+      html: htmlContent,
+      certificate
+    });
+  } catch (err) {
+    console.error('[Reporting] Error generating HTML from dossier:', err);
+    res.status(500).json({ error: 'Failed to generate HTML report', message: err.message });
+  }
+});
+
+// Generate and return canonical JSON export directly from in-memory dossier payload
+app.post('/api/reports/export/json', (req, res) => {
+  try {
+    const { dossier, options = {} } = req.body;
+    if (!dossier) {
+      return res.status(400).json({ error: 'Missing dossier in request body' });
+    }
+
+    const { certificate, exportPayload } = generateCanonicalJsonExport(dossier, options);
+
+    if (dossier.caseId) {
+      try {
+        logReportExport(dossier.caseId, dossier.emailId || null, {
+          reportUuid: certificate.certificateId.replace(/^CERT-/, ''),
+          reportTitle: `Interactive Forensic Export - ${dossier.caseNumber || 'Session'}`,
+          exportFormat: 'json',
+          rawSha256: certificate.acquisition.rawSha256,
+          dossierSha256: certificate.integritySeal.dossierDigest,
+          metadata: { examiner: certificate.examiner }
+        });
+      } catch (e) {}
+    }
+
+    res.json(sanitizeResponsePayload(exportPayload));
+  } catch (err) {
+    console.error('[Reporting] Error generating JSON from dossier:', err);
+    res.status(500).json({ error: 'Failed to generate JSON export', message: err.message });
+  }
+});
+
+// Verify cryptographic integrity of an exported dossier or certificate
+app.post('/api/reports/verify', (req, res) => {
+  try {
+    const result = verifyReportIntegrity(req.body);
+    res.json(result);
+  } catch (err) {
+    console.error('[Reporting] Error verifying report:', err);
+    res.status(500).json({
+      status: 'VERIFICATION_ERROR',
+      verified: false,
+      tampered: false,
+      message: 'Failed to complete verification: ' + err.message
+    });
+  }
+});
+
+// List audit reports for a specific case
+app.get('/api/cases/:id/reports', (req, res) => {
+  try {
+    const caseData = getCaseById(req.params.id);
+    if (!caseData) {
+      return res.status(404).json({ error: 'Case not found' });
+    }
+    const rawReports = getReportsForCase(caseData.case.id);
+    const reports = rawReports.map(r => ({
+      reportUuid: r.reportUuid,
+      exportFormat: r.exportFormat,
+      generatedTimestamp: r.generatedAt,
+      rawEmailSha256: r.rawSha256,
+      dossierSha256: r.dossierSha256
+    }));
+    res.json({ reports });
+  } catch (err) {
+    console.error('[Reporting] Error listing case reports:', err);
+    res.status(500).json({ error: 'Failed to retrieve case reports', message: err.message });
+  }
+});
+
+
+function sanitizeResponsePayload(data) {
+  if (!data || typeof data !== 'object') return data;
+  if (Array.isArray(data)) return data.map(sanitizeResponsePayload);
+
+  const clean = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (['modelUsed', 'reasoningTokens', 'provider', 'model', 'tokens', 'usage', 'prompt_tokens', 'completion_tokens', 'total_tokens', 'openrouterModel', 'internalReasoning'].includes(key)) {
+      continue;
+    }
+    clean[key] = sanitizeResponsePayload(value);
+  }
+  return clean;
+}
 
 app.listen(PORT, () => {
   console.log(`\n======================================================`);

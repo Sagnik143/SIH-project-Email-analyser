@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-import { Navigation, AlertTriangle, Clock, MapPin, Compass } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Compass, Info } from 'lucide-react';
 
 export default function GeoRelayMap({ relay, originGeo }) {
   const mapContainerRef = useRef(null);
@@ -36,7 +36,7 @@ export default function GeoRelayMap({ relay, originGeo }) {
 
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // OpenStreetMap Clean High-Resolution Tile Layer (No API Key Required, No Watermark)
+    // OpenStreetMap Clean High-Resolution Tile Layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap'
@@ -80,10 +80,10 @@ export default function GeoRelayMap({ relay, originGeo }) {
       const popupHtml = `
         <div style="font-size: 12px; line-height: 1.5; min-width: 190px; padding: 2px;">
           <div style="font-weight: 800; color: ${isOrigin ? '#e11d48' : '#2563eb'}; font-size: 11px; text-transform: uppercase; margin-bottom: 4px;">
-            ${isOrigin ? '🚨 Origin Mail Server (Hop 1)' : (isDestination ? '🏁 Destination Inbox MX' : '🔄 Relay Hop ' + pt.hopNumber)}
+            ${isOrigin ? 'Claimed Origin (Hop 1, UNVERIFIED)' : (isDestination ? 'Destination Inbox MX' : 'Relay Hop ' + pt.hopNumber)}
           </div>
           <div style="font-family: monospace; font-weight: 700; color: #0f172a; font-size: 13px;">${pt.ip}</div>
-          <div style="color: #475569; font-size: 12px; margin-top: 2px;">📍 ${pt.city}, ${pt.country}</div>
+          <div style="color: #475569; font-size: 12px; margin-top: 2px;">📍 Observed Infrastructure: ${pt.city}, ${pt.country}</div>
           <div style="color: #64748b; font-size: 11px; margin-top: 4px; border-top: 1px solid #f1f5f9; padding-top: 4px;">
             MTA: <strong>${pt.hostname || 'Direct'}</strong>
             ${pt.delaySeconds !== null ? `<br>Transit Delay: +${pt.delaySeconds}s` : ''}
@@ -119,7 +119,7 @@ export default function GeoRelayMap({ relay, originGeo }) {
   }, [trajectory]);
 
   return (
-    <div className="app-card p-6 space-y-4 bg-white border-slate-200 shadow-xs relative isolate z-0">
+    <div className="app-card p-6 space-y-3.5 bg-white border-slate-200 shadow-xs relative isolate z-0">
       
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -129,10 +129,10 @@ export default function GeoRelayMap({ relay, originGeo }) {
           </div>
           <div>
             <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Global Email Journey & Origin Location
+              Observable Relay Path & Infrastructure Location
             </h3>
             <p className="text-xs text-slate-500">
-              Visual map tracking mail server hops across the globe to the true source
+              Reconstructed transmission path between observable mail relay infrastructure
             </p>
           </div>
         </div>
@@ -140,7 +140,7 @@ export default function GeoRelayMap({ relay, originGeo }) {
         {/* Legend */}
         <div className="hidden sm:flex items-center gap-3 text-xs font-semibold">
           <span className="flex items-center gap-1.5 text-rose-600">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-xs"></span> Origin
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-xs"></span> Claimed Origin (UNVERIFIED)
           </span>
           <span className="flex items-center gap-1.5 text-blue-600">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block"></span> Relay Server
@@ -151,12 +151,33 @@ export default function GeoRelayMap({ relay, originGeo }) {
         </div>
       </div>
 
-      {/* Anomalies Alert */}
+      {/* Geolocation Limitation Notice */}
+      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] flex items-start gap-2">
+        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+        <span className="leading-relaxed">
+          <strong>Forensic Notice:</strong> IP geolocation describes the registered/observed infrastructure associated with an IP address. It does not establish the physical location or identity of a person.
+        </span>
+      </div>
+
+      {/* Geolocation Unavailable Banner if applicable */}
+      {originGeo?.status === 'unavailable' && (
+        <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center gap-2">
+          <span>⚠️</span>
+          <span>
+            <strong>Service Notice:</strong> Geolocation enrichment service is temporarily unavailable ({originGeo.reason || 'Offline'}). Transmission hop telemetry is displayed without coordinates.
+          </span>
+        </div>
+      )}
+
+      {/* Anomalies Alert - Timing & Routing Inconsistency */}
       {anomalies.length > 0 && (
-        <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2.5">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
-          <div className="flex-1">
-            <strong>Suspicious Travel Speed:</strong> {anomalies[0].alert} ({anomalies[0].speedKmPerSec} km/s implies proxy evasion or header tampering).
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2.5">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+          <div className="flex-1 leading-relaxed">
+            <strong>Relay Timing / Routing Inconsistency:</strong> {anomalies[0].alert || 'Timestamp inconsistency detected between observed relay entries.'}
+            <span className="block text-[10px] text-amber-700 italic mt-0.5">
+              Differences may reflect unsynchronized server clocks, intermediate MTA queuing, or timezone configuration disparities.
+            </span>
           </div>
         </div>
       )}
@@ -168,7 +189,7 @@ export default function GeoRelayMap({ relay, originGeo }) {
         {/* Origin Quick Overlay Pin */}
         <div className="absolute bottom-3 left-3 z-10 px-3.5 py-2 rounded-xl bg-white/95 backdrop-blur-md border border-slate-200 text-xs text-slate-700 shadow-md flex items-center gap-2.5 font-medium">
           <MapPin className="w-4 h-4 text-rose-600" />
-          <span>Origin: <strong className="text-slate-900">{originGeo?.city || 'Unknown'}, {originGeo?.country || 'Unknown'}</strong></span>
+          <span>Earliest Infrastructure Node: <strong className="text-slate-900">{originGeo?.city || 'Unknown'}, {originGeo?.country || 'Unknown'}</strong></span>
           <span className="text-slate-300">|</span>
           <span className="text-blue-600 font-semibold">{relay?.totalHops || 0} Hops Traversed</span>
           <span className="text-slate-300">|</span>

@@ -28,3 +28,12 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# SQLite Database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backend/data/*.db

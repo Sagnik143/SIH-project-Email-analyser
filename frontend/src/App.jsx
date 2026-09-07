@@ -1,49 +1,58 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
-import ThreatScoreCard from './components/ThreatScoreCard';
-import GeoRelayMap from './components/GeoRelayMap';
-import RelayTimeline from './components/RelayTimeline';
-import AIIntelligenceCard from './components/AIIntelligenceCard';
-import AuthMatrix from './components/AuthMatrix';
-import IoCVault from './components/IoCVault';
-import HeaderInspector from './components/HeaderInspector';
-import AttributionGraphCard from './components/AttributionGraphCard';
+import Sidebar from './components/Sidebar';
+import Topbar from './components/Topbar';
+import DashboardView from './components/DashboardView';
+import AnalyzeEmailView from './components/AnalyzeEmailView';
+import InvestigationsView from './components/InvestigationsView';
+import InvestigationWorkspace from './components/InvestigationWorkspace';
+import CampaignsView from './components/CampaignsView';
+import ThreatIntelView from './components/ThreatIntelView';
+import ReportsView from './components/ReportsView';
+import SettingsView from './components/SettingsView';
+
+import EvidenceInspectorModal from './components/EvidenceInspectorModal';
 import ForensicReportModal from './components/ForensicReportModal';
-import EmailInputModal from './components/EmailInputModal';
 import { API_BASE_URL } from './config';
-import { Shield, Loader2, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export default function App() {
+  const [activeNav, setActiveNav] = useState('dashboard');
   const [samples, setSamples] = useState([]);
   const [selectedSampleId, setSelectedSampleId] = useState('');
+  const [cases, setCases] = useState([]);
+  const [casesLoading, setCasesLoading] = useState(false);
+
   const [dossier, setDossier] = useState(null);
+  const [activeCase, setActiveCase] = useState(null);
+  const [savedCaseNumber, setSavedCaseNumber] = useState(null);
+  const [isSavingCase, setIsSavingCase] = useState(false);
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState(null);
-  const [openrouterModel, setOpenrouterModel] = useState('gpt-6-astra');
 
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  // Modals state
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedEvidence, setSelectedEvidence] = useState(null);
 
-  // Initialize data on mount
+  // Fetch initial samples & cases on mount
   useEffect(() => {
     async function init() {
       try {
-        const healthRes = await fetch(`${API_BASE_URL}/api/health`);
-        if (healthRes.ok) {
-          const healthData = await healthRes.json();
-          if (healthData.primaryModel) setOpenrouterModel(healthData.primaryModel);
-        }
-
+        // 1. Fetch samples
         const samplesRes = await fetch(`${API_BASE_URL}/api/samples`);
         if (samplesRes.ok) {
           const samplesData = await samplesRes.json();
           const list = samplesData.samples || [];
           setSamples(list);
 
+          // Preload first sample into memory
           if (list.length > 0) {
-            loadAndAnalyzeSample(list[0].id);
+            loadAndAnalyzeSample(list[0].id, false);
           }
         }
+
+        // 2. Fetch cases
+        await fetchCases();
       } catch (err) {
         console.error('Initialization error:', err);
         setError('Failed to connect to forensic backend API. Please check your network connection.');
@@ -53,7 +62,22 @@ export default function App() {
     init();
   }, []);
 
-  const loadAndAnalyzeSample = async (sampleId) => {
+  const fetchCases = async () => {
+    setCasesLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/cases`);
+      if (res.ok) {
+        const data = await res.json();
+        setCases(Array.isArray(data) ? data : data.cases || []);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch cases:', err);
+    } finally {
+      setCasesLoading(false);
+    }
+  };
+
+  const loadAndAnalyzeSample = async (sampleId, navigateToWorkspace = true) => {
     setIsAnalyzing(true);
     setError(null);
     setSelectedSampleId(sampleId);
@@ -63,7 +87,7 @@ export default function App() {
       if (!res.ok) throw new Error('Failed to load sample dataset');
       const sample = await res.json();
 
-      await runAnalysis(sample.rawEmail);
+      await runAnalysis(sample.rawEmail, navigateToWorkspace);
     } catch (err) {
       console.error('Sample analysis error:', err);
       setError(err.message || 'Analysis pipeline failed');
@@ -72,7 +96,7 @@ export default function App() {
     }
   };
 
-  const runAnalysis = async (rawEmailText) => {
+  const runAnalysis = async (rawEmailText, navigateToWorkspace = true) => {
     setIsAnalyzing(true);
     setError(null);
 
@@ -90,6 +114,12 @@ export default function App() {
 
       const forensicData = await response.json();
       setDossier(forensicData);
+      setActiveCase(null);
+      setSavedCaseNumber(null);
+
+      if (navigateToWorkspace) {
+        setActiveNav('workspace');
+      }
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err.message);
@@ -98,114 +128,234 @@ export default function App() {
     }
   };
 
+  const handleOpenCase = async (caseRecord) => {
+    setActiveCase(caseRecord);
+    setSavedCaseNumber(caseRecord.caseNumber);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/cases/${caseRecord.id}`);
+      if (res.ok) {
+        const fullCase = await res.json();
+        // If the case already has a dossier or emails, analyze or mount it
+        if (fullCase.case?.dossier) {
+          setDossier(fullCase.case.dossier);
+        } else if (fullCase.emails?.[0]) {
+          // If we have an email but need full analysis, run it
+          const emailRecord = fullCase.emails[0];
+          if (emailRecord.raw) {
+            await runAnalysis(emailRecord.raw, true);
+          } else {
+            // Re-use current dossier if already active
+            setActiveNav('workspace');
+          }
+        } else {
+          setActiveNav('workspace');
+        }
+      } else {
+        setActiveNav('workspace');
+      }
+    } catch (err) {
+      console.error('Failed to open case details:', err);
+      setActiveNav('workspace');
+    }
+  };
+
+  const handleSaveActiveToCase = async () => {
+    if (!dossier || savedCaseNumber || isSavingCase) return;
+    setIsSavingCase(true);
+
+    try {
+      const caseTitle = dossier.envelope?.subject || 'Forensic Investigation';
+      const caseRes = await fetch(`${API_BASE_URL}/api/cases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: caseTitle, status: 'open' })
+      });
+      if (!caseRes.ok) throw new Error('Failed to create case');
+      const newCase = await caseRes.json();
+
+      const saveRes = await fetch(`${API_BASE_URL}/api/cases/${newCase.id}/save-analysis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawEmail: dossier.rawEmail || 'From: ' + (dossier.envelope?.from?.raw || ''),
+          dossier,
+          filename: `${newCase.caseNumber}.eml`
+        })
+      });
+      if (!saveRes.ok) throw new Error('Failed to associate analysis with case');
+
+      setSavedCaseNumber(newCase.caseNumber);
+      setActiveCase(newCase);
+      await fetchCases();
+    } catch (err) {
+      console.error('Case save error:', err);
+      setError('Failed to persist investigation to case');
+    } finally {
+      setIsSavingCase(false);
+    }
+  };
+
+  const handleSelectEvidence = (evIdOrObj) => {
+    if (!dossier) return;
+    if (typeof evIdOrObj === 'object' && evIdOrObj !== null) {
+      setSelectedEvidence(evIdOrObj);
+      return;
+    }
+    const found = (dossier.evidence || []).find(e => e.id === evIdOrObj);
+    if (found) {
+      setSelectedEvidence(found);
+    } else {
+      setSelectedEvidence({
+        id: evIdOrObj,
+        source: 'INVESTIGATION_ENGINE',
+        field: 'Observed Telemetry',
+        value: 'Authoritative evidence referenced in findings',
+        collectionMethod: 'DIRECT_EXTRACTION',
+        timestamp: dossier.timestamp
+      });
+    }
+  };
+
+  // Resolve topbar title
+  let activeNavTitle = 'Dashboard';
+  if (activeNav === 'analyze') activeNavTitle = 'Analyze Email';
+  else if (activeNav === 'investigations') activeNavTitle = 'Investigations Repository';
+  else if (activeNav === 'workspace') activeNavTitle = 'Investigation Workspace';
+  else if (activeNav === 'campaigns') activeNavTitle = 'Campaigns & Correlated Activity';
+  else if (activeNav === 'threat-intel') activeNavTitle = 'Threat Intelligence';
+  else if (activeNav === 'reports') activeNavTitle = 'Reports & Audits';
+  else if (activeNav === 'settings') activeNavTitle = 'System Settings';
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-800 selection:bg-blue-100 selection:text-blue-900">
       
-      {/* Top Navigation Header */}
-      <Header
-        samples={samples}
-        selectedSampleId={selectedSampleId}
-        onSelectSample={loadAndAnalyzeSample}
-        onOpenUploadModal={() => setIsUploadModalOpen(true)}
-        onOpenReportModal={() => setIsReportModalOpen(true)}
-        isAnalyzing={isAnalyzing}
-        openrouterModel={openrouterModel}
+      {/* 1. Left Sidebar Navigation */}
+      <Sidebar
+        activeNav={activeNav}
+        onSelectNav={(navId) => setActiveNav(navId)}
+        pendingCasesCount={cases.length}
       />
 
-      {/* Main Content Dashboard */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 lg:px-8 py-6 space-y-6">
+      {/* 2. Main Content Area */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
         
-        {/* Error Alert */}
-        {error && (
-          <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button
-              onClick={() => selectedSampleId && loadAndAnalyzeSample(selectedSampleId)}
-              className="px-3 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold transition"
-            >
-              Retry
-            </button>
-          </div>
-        )}
+        {/* Top Header */}
+        <Topbar
+          activeNavTitle={activeNavTitle}
+          activeCaseNumber={savedCaseNumber || activeCase?.caseNumber || (dossier?.caseNumber ? dossier.caseNumber : null)}
+          samples={samples}
+          selectedSampleId={selectedSampleId}
+          onSelectSample={(sampleId) => loadAndAnalyzeSample(sampleId, true)}
+          onOpenAnalyze={() => setActiveNav('analyze')}
+          onOpenReport={() => setIsReportModalOpen(true)}
+          isAnalyzing={isAnalyzing}
+          hasDossier={Boolean(dossier)}
+        />
 
-        {/* Loading State Overlay */}
-        {isAnalyzing && (
-          <div className="p-10 rounded-2xl bg-white border border-slate-200 shadow-sm text-center flex flex-col items-center justify-center space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-            <div className="text-base font-bold text-slate-900">
-              Analyzing Email Threat Telemetry...
-            </div>
-            <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-              Tracing server hops &bull; Geocoding sender origin &bull; Checking authentication &bull; GPT-6 Astra AI evaluation
-            </p>
-          </div>
-        )}
-
-        {/* Dashboard Panels (when dossier is ready) */}
-        {!isAnalyzing && dossier && (
-          <>
-            {/* 1. Threat Score & Summary Card */}
-            <ThreatScoreCard dossier={dossier} />
-
-            {/* 2. Interactive Map & Server Hop Timeline */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-7">
-                <GeoRelayMap relay={dossier.relay} originGeo={dossier.originGeo} />
+        {/* Scrollable View Container */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+          
+          {/* Error Alert */}
+          {error && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between shadow-2xs">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                <span>{error}</span>
               </div>
-              <div className="lg:col-span-5">
-                <RelayTimeline relay={dossier.relay} />
-              </div>
+              <button
+                onClick={() => setError(null)}
+                className="px-3 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-semibold transition"
+              >
+                Dismiss
+              </button>
             </div>
+          )}
 
-            {/* 3. AI Security Analysis & Deception Detection */}
-            <AIIntelligenceCard aiThreatIntelligence={dossier.aiThreatIntelligence} />
-
-            {/* 4. Graph Correlation & Sender Attribution (AICTE PS #26106) */}
-            <AttributionGraphCard attributionAndGraph={dossier.attributionAndGraph} />
-
-            {/* 5. Sender Identity & Authentication Verifications */}
-            <AuthMatrix authentication={dossier.authentication} envelope={dossier.envelope} />
-
-            {/* 5. Indicators of Compromise (IoC) Vault */}
-            <IoCVault iocs={dossier.iocs} />
-
-            {/* 6. Raw RFC 5322 Technical Headers Explorer */}
-            <HeaderInspector 
-              headerLines={dossier.headerLines} 
-              rawHeaders={dossier.rawHeaders} 
+          {/* Active View Router */}
+          {activeNav === 'dashboard' && (
+            <DashboardView
+              cases={cases}
+              activeDossier={dossier}
+              onOpenInvestigation={(c) => {
+                if (c?.dossierId) setActiveNav('workspace');
+                else handleOpenCase(c);
+              }}
+              onNavigateToAnalyze={() => setActiveNav('analyze')}
+              onNavigateToReports={() => setActiveNav('reports')}
+              onOpenReportModal={() => setIsReportModalOpen(true)}
             />
-          </>
-        )}
+          )}
 
-      </main>
+          {activeNav === 'analyze' && (
+            <AnalyzeEmailView
+              samples={samples}
+              onAnalyzeRaw={(rawText) => runAnalysis(rawText, true)}
+              isAnalyzing={isAnalyzing}
+              error={error}
+            />
+          )}
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white px-4 py-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-slate-600">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>AegisMail &bull; Email Threat Intelligence & Incident Response</span>
-          </div>
-          <div className="font-mono text-[11px] text-slate-400">
-            Integrity Hash: <span className="text-blue-600 font-semibold">{dossier?.integrity?.sha256?.slice(0, 16) || 'N/A'}...</span>
-          </div>
-        </div>
-      </footer>
+          {activeNav === 'investigations' && (
+            <InvestigationsView
+              cases={cases}
+              onOpenCase={handleOpenCase}
+              onRefresh={fetchCases}
+              loading={casesLoading}
+            />
+          )}
 
-      {/* Upload Modal */}
-      <EmailInputModal
-        isOpen={isUploadModalOpen}
-        onClose={() => setIsUploadModalOpen(false)}
-        onAnalyzeCustom={runAnalysis}
-        isAnalyzing={isAnalyzing}
+          {activeNav === 'workspace' && (
+            <InvestigationWorkspace
+              dossier={dossier}
+              caseInfo={activeCase}
+              onOpenReportModal={() => setIsReportModalOpen(true)}
+              onSelectEvidence={handleSelectEvidence}
+              onSaveToCase={handleSaveActiveToCase}
+              isSavingCase={isSavingCase}
+              savedCaseNumber={savedCaseNumber}
+            />
+          )}
+
+          {activeNav === 'campaigns' && (
+            <CampaignsView
+              activeCaseNumber={savedCaseNumber || activeCase?.caseNumber || dossier?.caseNumber}
+              cases={cases}
+              onSelectCase={handleOpenCase}
+            />
+          )}
+
+          {activeNav === 'threat-intel' && (
+            <ThreatIntelView
+              dossier={dossier}
+            />
+          )}
+
+          {activeNav === 'reports' && (
+            <ReportsView
+              dossier={dossier}
+              caseInfo={activeCase}
+              onOpenReportModal={() => setIsReportModalOpen(true)}
+            />
+          )}
+
+          {activeNav === 'settings' && (
+            <SettingsView
+              casesCount={cases.length}
+            />
+          )}
+
+        </main>
+      </div>
+
+      {/* Global Modals */}
+      <EvidenceInspectorModal
+        isOpen={Boolean(selectedEvidence)}
+        onClose={() => setSelectedEvidence(null)}
+        evidence={selectedEvidence}
+        allFindings={dossier?.findings || []}
       />
 
-      {/* Forensic Report Modal */}
       <ForensicReportModal
         isOpen={isReportModalOpen}
         onClose={() => setIsReportModalOpen(false)}

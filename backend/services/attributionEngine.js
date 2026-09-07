@@ -55,11 +55,11 @@ export function analyzeAttributionAndGraph(parsedEmail, relayAnalysis, authData,
     edges.push({ from: 'msg-root', to: 'reply-to-identity', relation: 'redirects_replies_to' });
   }
 
-  // Originating IP Node
+  // Originating IP Node (Observed Infrastructure)
   nodes.push({
     id: 'origin-ip',
     label: `${originatingIP} (${geoData.city}, ${geoData.countryCode})`,
-    type: geoData.threatFlags?.length > 0 ? 'MALICIOUS_IP' : 'ORIGIN_IP',
+    type: geoData.threatFlags?.length > 0 ? 'HIGH_RISK_INFRASTRUCTURE' : 'OBSERVED_ORIGIN_IP',
     details: `ISP: ${geoData.isp} | ASN: ${geoData.asn}`
   });
   edges.push({ from: 'msg-root', to: 'origin-ip', relation: 'originated_at' });
@@ -79,13 +79,13 @@ export function analyzeAttributionAndGraph(parsedEmail, relayAnalysis, authData,
     }
   });
 
-  // Malicious URL Nodes
+  // Suspicious URL Nodes
   (iocData.urls || []).slice(0, 3).forEach((u, idx) => {
     const urlId = `ioc-url-${idx}`;
     nodes.push({
       id: urlId,
       label: u.defanged || u.url,
-      type: u.isSuspicious ? 'MALICIOUS_URL' : 'URL',
+      type: u.isSuspicious ? 'SUSPICIOUS_URL' : 'URL',
       details: u.domain
     });
     edges.push({ from: 'msg-root', to: urlId, relation: 'contains_link' });
@@ -97,43 +97,43 @@ export function analyzeAttributionAndGraph(parsedEmail, relayAnalysis, authData,
     nodes.push({
       id: attId,
       label: att.filename,
-      type: att.isDangerous ? 'MALICIOUS_PAYLOAD' : 'ATTACHMENT',
+      type: att.isDangerous ? 'DANGEROUS_ATTACHMENT' : 'ATTACHMENT',
       details: `SHA-256: ${att.sha256?.substring(0, 16)}...`
     });
     edges.push({ from: 'msg-root', to: attId, relation: 'drops_attachment' });
   });
 
-  // 2. Attribution Classification
-  let infraType = 'Authorized Infrastructure';
-  let actorType = 'Legitimate Business Sender';
-  let campaign = 'Standard Corporate Traffic';
-  let attributionConfidence = 88;
+  // 2. Attribution & Clustering Classification (Investigative Hypotheses - Unverified)
+  let infraType = 'Observed Standard Infrastructure';
+  let actorType = 'Attribution Not Established (Standard Correspondence Pattern)';
+  let campaign = 'Standard Corporate Correspondence';
+  let attributionConfidence = 85;
 
   if (authData.displayNameAnalysis?.isSpoofed && authData.alignmentAnalysis?.hasReplyToDiscrepancy) {
     infraType = 'Spoofed External Domain & Redirection Relay';
-    actorType = 'Business Email Compromise (BEC) Fraud Actor';
-    campaign = 'BEC-Executive-WireTransfer-Cluster';
-    attributionConfidence = 94;
+    actorType = 'Investigative Profile (Unverified): Pattern resembles BEC payment diversion tactics';
+    campaign = 'BEC-PaymentDiversion-Pattern';
+    attributionConfidence = 90;
   } else if (authData.domainAnalysis?.isLookalike) {
-    infraType = 'Direct Malicious Actor Typosquatting Infrastructure';
-    actorType = 'Credential Harvesting Cybercrime Syndicate';
-    campaign = 'M365-Lookalike-Portal-Campaign';
-    attributionConfidence = 96;
+    infraType = 'Lookalike Typosquatting Infrastructure';
+    actorType = 'Investigative Profile (Unverified): Pattern resembles credential harvesting infrastructure';
+    campaign = 'Lookalike-Harvest-Pattern';
+    attributionConfidence = 92;
   } else if (iocData.dangerousAttachmentsCount > 0) {
-    infraType = 'Compromised Weaponized Drop Server';
-    actorType = 'Malware Distribution Operation (Trojan/Ransomware)';
-    campaign = 'Trojan-Invoice-Remittance-Lure';
-    attributionConfidence = 95;
+    infraType = 'Suspicious Distribution Infrastructure (Payload Attached)';
+    actorType = 'Investigative Profile (Unverified): Pattern resembles executable/script delivery';
+    campaign = 'Payload-Delivery-Pattern';
+    attributionConfidence = 92;
   } else if ((relayAnalysis.totalHops || 0) >= 4 && (relayAnalysis.hopAnomalies || []).length > 0) {
-    infraType = 'Anonymized Bulletproof / State-Sponsored Multi-Hop Evasion';
-    actorType = 'Advanced Persistent Threat (APT) / Evasion Operator';
-    campaign = 'APT-MultiHop-Espionage-Chain';
-    attributionConfidence = 91;
+    infraType = 'Anomalous Multi-Hop Routing Infrastructure';
+    actorType = 'Investigative Profile (Unverified): Multi-hop relay timing inconsistency';
+    campaign = 'MultiHop-Routing-Inconsistency-Pattern';
+    attributionConfidence = 80;
   } else if (authData.spf?.status === 'PASS' && authData.dkim?.status === 'PASS') {
-    infraType = 'Authorized Corporate Mail Infrastructure';
-    actorType = 'Verified Enterprise Entity';
-    campaign = 'Authentic Corporate Correspondence';
-    attributionConfidence = 99;
+    infraType = 'Reported Authentic Infrastructure';
+    actorType = 'Reported Enterprise Identity (Subject to Header Authenticity)';
+    campaign = 'Authentic Traffic (Reported)';
+    attributionConfidence = 95;
   }
 
   return {
@@ -142,7 +142,8 @@ export function analyzeAttributionAndGraph(parsedEmail, relayAnalysis, authData,
       infrastructureType: infraType,
       probableActorType: actorType,
       campaignCluster: campaign,
-      confidenceScore: attributionConfidence
+      confidenceScore: attributionConfidence,
+      disclaimer: 'Attribution profiles are heuristic hypotheses. Email evidence alone does not establish actor identity.'
     },
     graphCorrelation: {
       nodesCount: nodes.length,
@@ -150,13 +151,14 @@ export function analyzeAttributionAndGraph(parsedEmail, relayAnalysis, authData,
       nodes,
       edges
     },
-    earliestReliableSendingNode: relayAnalysis.originatingIP,
+    earliestReliableSendingNode: relayAnalysis.earliestTrustworthySendingInfrastructure || relayAnalysis.originatingIP,
     originatingGeoLocation: {
       city: geoData.city,
       country: geoData.country,
       isp: geoData.isp,
       asn: geoData.asn,
-      coordinates: [geoData.latitude, geoData.longitude]
+      coordinates: [geoData.latitude, geoData.longitude],
+      disclaimer: 'IP geolocation describes network infrastructure and does not establish the physical location or identity of the sender.'
     },
     evidentiaryChainOfCustody: {
       status: 'Cryptographically Verified (SHA-256)',

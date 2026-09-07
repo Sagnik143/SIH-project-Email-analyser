@@ -130,10 +130,10 @@ UEsDBBQAAAAIAKV6a1Vb...[MALICIOUS_VBA_PAYLOAD_SIMULATED_DATA_STRING_FOR_FORENSIC
   },
   {
     id: 'sample-apt-impossible-travel',
-    title: 'Nation-State / APT Relay Chain with Impossible Travel',
-    category: 'State-Sponsored / Advanced Persistent Threat',
+    title: 'Multi-Hop Relay Chain with Timing & Routing Inconsistencies',
+    category: 'Multi-Hop Routing / Timing Inconsistency',
     riskIndicator: 'HIGH',
-    description: 'Complex multi-relay evasion path traversing St. Petersburg, Bucharest, Frankfurt, and Virginia within 8 seconds.',
+    description: 'Complex multi-relay path traversing infrastructure across St. Petersburg, Bucharest, Frankfurt, and Virginia within 8 seconds, demonstrating routing and timing inconsistencies.',
     rawEmail: `Received: from mail-edge.gov-defense.org [20.42.11.89] by mx.gov-defense.org with ESMTPS id d01982 for <director@gov-defense.org>; Wed, 02 Sep 2026 19:40:12 +0000
 Received: from frankfurt-gw.transit-hub.de [50.110.9.1] by mail-edge.gov-defense.org with ESMTPS id f98213; Wed, 02 Sep 2026 19:40:09 +0000
 Received: from bucharest-proxy.rom-net.ro [194.67.210.15] by frankfurt-gw.transit-hub.de with ESMTP id b77123; Wed, 02 Sep 2026 19:40:06 +0000

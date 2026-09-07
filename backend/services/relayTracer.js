@@ -58,9 +58,13 @@ export function traceRelayHops(rawHeadersMap, headerLines = []) {
     }
   }
 
-  // Identify probable originating IP
-  // First check dedicated headers if present
+  // Identify observed / claimed earlier origin IP
+  // Note (Phase 1): Header fields such as X-Originating-IP or early Received entries
+  // represent claims present in uploaded data and are UNVERIFIED.
   let originatingIP = null;
+  let originSource = 'earliest_received_hop';
+  let isUnverifiedHeaderClaim = true;
+
   const xOriginatingIP = rawHeadersMap['x-originating-ip']?.[0] || 
                          rawHeadersMap['x-sender-ip']?.[0] ||
                          rawHeadersMap['x-client-ip']?.[0];
@@ -69,10 +73,12 @@ export function traceRelayHops(rawHeadersMap, headerLines = []) {
     const match = xOriginatingIP.match(IPV4_REGEX);
     if (match && !isPrivateIP(match[0])) {
       originatingIP = match[0];
+      originSource = 'unverified_x_originating_header';
+      isUnverifiedHeaderClaim = true;
     }
   }
 
-  // If not found, find the earliest public IP in the hops
+  // If not found, find the earliest public IP recorded in the Received chain
   if (!originatingIP) {
     for (const hop of hops) {
       if (hop.ip && !hop.isPrivate) {
@@ -82,10 +88,15 @@ export function traceRelayHops(rawHeadersMap, headerLines = []) {
       }
     }
   } else {
-    // Mark the hop matching originating IP
+    // Mark the hop matching originating IP if present
     const matchedHop = hops.find(h => h.ip === originatingIP);
     if (matchedHop) matchedHop.isOriginHop = true;
   }
+
+  // Earliest trustworthy sending infrastructure is the earliest public hop observed
+  // in the Received chain (not blindly trusting synthetic X-Originating-IP)
+  const earliestPublicHop = hops.find(h => h.ip && !h.isPrivate);
+  const earliestTrustworthySendingInfrastructure = earliestPublicHop ? earliestPublicHop.ip : (hops[0]?.ip || 'Unknown');
 
   // Total transit time calculation
   let totalTransitTimeSeconds = 0;
@@ -97,9 +108,17 @@ export function traceRelayHops(rawHeadersMap, headerLines = []) {
     }
   }
 
+  const resolvedOrigin = originatingIP || (hops[0]?.ip || 'Unknown');
+
   return {
     totalHops: hops.length,
-    originatingIP: originatingIP || (hops[0]?.ip || 'Unknown'),
+    originatingIP: resolvedOrigin, // Retained for backward compatibility
+    claimedOriginatingIP: resolvedOrigin,
+    originatingIPStatus: 'UNVERIFIED',
+    originatingIPLabel: 'Claimed Earlier Origin (UNVERIFIED)',
+    originSource,
+    isUnverifiedHeaderClaim,
+    earliestTrustworthySendingInfrastructure,
     totalTransitTimeSeconds,
     hops
   };

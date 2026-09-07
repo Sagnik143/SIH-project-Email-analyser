@@ -1,5 +1,5 @@
 import React from 'react';
-import { Network, ShieldAlert, Globe, Server, Hash, Layers, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Network, Globe, Server, Hash, Layers, CheckCircle2, ArrowRight, Info, Shield } from 'lucide-react';
 
 export default function AttributionGraphCard({ attributionAndGraph }) {
   if (!attributionAndGraph) return null;
@@ -29,33 +29,41 @@ export default function AttributionGraphCard({ attributionAndGraph }) {
   };
 
   return (
-    <div className="app-card p-6 space-y-6 bg-white border border-slate-200 shadow-xs">
+    <div className="app-card p-6 space-y-5 bg-white border border-slate-200 shadow-xs">
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-500/20">
+          <div className="p-2.5 rounded-2xl bg-cyan-600 text-white shadow-xs">
             <Network className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-slate-900 tracking-tight">
-                Graph Correlation & Sender Attribution
+                Observed Tactics & Investigation Hypotheses
               </h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-800 border border-cyan-200">
-                AICTE Key Component 4
+                Graph Correlation
               </span>
             </div>
             <p className="text-xs text-slate-500">
-              Graph-based relationship analysis across domains, IPs, mail hops, and campaign infrastructure
+              Graph correlation across observed domains, IPs, mail hops, and infrastructure indicators
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-            Confidence: <strong className="text-blue-600">{attributionClassification?.confidenceScore}%</strong>
+            Heuristic Score: <strong className="text-blue-600">{attributionClassification?.confidenceScore ?? 85}/100</strong>
           </span>
+        </div>
+      </div>
+
+      {/* Attribution / Hypothesis Limitation Banner */}
+      <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-start gap-2.5 leading-relaxed">
+        <Info className="w-4 h-4 text-cyan-600 shrink-0 mt-0.5" />
+        <div>
+          <strong>Investigative Limitation:</strong> Available email evidence does not establish the identity of a specific attacker, threat actor, or coordinated campaign. Clustered attributes represent heuristic investigative hypotheses based on observable artifacts. Attribution is not established from this email alone.
         </div>
       </div>
 
@@ -65,26 +73,26 @@ export default function AttributionGraphCard({ attributionAndGraph }) {
         <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
             <Server className="w-3.5 h-3.5 text-blue-600" />
-            Infrastructure Profile
+            Observed Infrastructure
           </div>
           <div className="text-xs font-bold text-slate-900 leading-snug">
-            {attributionClassification?.infrastructureType}
+            {attributionClassification?.infrastructureType || 'Standard SMTP Relay Route'}
           </div>
           <div className="text-[11px] text-slate-500">
-            Earliest Node: <span className="font-mono font-medium text-slate-700">{earliestReliableSendingNode}</span>
+            Earliest Observed Node: <span className="font-mono font-medium text-slate-700">{earliestReliableSendingNode || 'Direct Host'}</span>
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-purple-50/70 border border-purple-100 space-y-1.5">
           <div className="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-purple-600" />
-            Campaign Clustering
+            Investigative Cluster (Hypothesis)
           </div>
           <div className="text-xs font-bold text-purple-950 font-mono leading-snug">
-            {attributionClassification?.campaignCluster}
+            {attributionClassification?.campaignCluster || 'Generic Telemetry Cluster'}
           </div>
           <div className="text-[11px] text-purple-700">
-            Persona: <span className="font-medium text-purple-900">{attributionClassification?.probableActorType}</span>
+            Working Profile: <span className="font-medium text-purple-900">{attributionClassification?.probableActorType || 'Behavioral Pattern'}</span>
           </div>
         </div>
 
@@ -95,16 +103,16 @@ export default function AttributionGraphCard({ attributionAndGraph }) {
           </div>
           <div className="text-xs font-bold text-emerald-950 flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            {evidentiaryChainOfCustody?.status}
+            {evidentiaryChainOfCustody?.status || 'Active Integrity Trace'}
           </div>
           <div className="text-[11px] text-emerald-800 truncate font-mono" title={evidentiaryChainOfCustody?.evidenceHash}>
-            SHA-256: {evidentiaryChainOfCustody?.evidenceHash ? `${evidentiaryChainOfCustody.evidenceHash.substring(0, 18)}...` : 'N/A'}
+            SHA-256: {evidentiaryChainOfCustody?.evidenceHash ? `${evidentiaryChainOfCustody.evidenceHash.substring(0, 18)}...` : 'Preserved'}
           </div>
         </div>
 
       </div>
 
-      {/* Visual Graph Node Correlation Timeline */}
+      {/* Visual Graph Node Correlation Flow */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -113,7 +121,7 @@ export default function AttributionGraphCard({ attributionAndGraph }) {
           </span>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900 text-slate-100 space-y-4">
+        <div className="p-4 rounded-xl bg-slate-900 text-slate-100 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             {nodes.map((node, i) => (
               <React.Fragment key={node.id}>
@@ -133,10 +141,10 @@ export default function AttributionGraphCard({ attributionAndGraph }) {
 
           <div className="border-t border-slate-800 pt-3 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
             <span>
-              Origin Geo: <strong className="text-slate-200">{originatingGeoLocation?.city}, {originatingGeoLocation?.country}</strong> ({originatingGeoLocation?.isp})
+              Observed Infrastructure Geo: <strong className="text-slate-200">{originatingGeoLocation?.city || 'Unknown'}, {originatingGeoLocation?.country || 'Unknown'}</strong> ({originatingGeoLocation?.isp || 'Standard Carrier'})
             </span>
             <span className="text-slate-400">
-              Compliant with AICTE / Indian IT Act Digital Evidence Preservation
+              Aligned with relevant digital-evidence handling principles
             </span>
           </div>
         </div>

@@ -21,8 +21,8 @@ async function runTestSuite() {
   try {
     const res = await axios.get(`${BASE_URL}/api/health`);
     const d = res.data;
-    const isOk = d.status === 'online' && d.problemStatementId === 26106 && (d.aiKeyConfigured === true || d.openrouterKeyConfigured === true);
-    recordTest('Health Check & PS 26106 Metadata', isOk, `Model: ${d.primaryModel}, PS ID: ${d.problemStatementId}`);
+    const isOk = d.status === 'online' && d.problemStatementId === 26106 && d.aiEngineStatus === 'active';
+    recordTest('Health Check & PS 26106 Metadata', isOk, `Status: ${d.status}, PS ID: ${d.problemStatementId}`);
   } catch (err) {
     recordTest('Health Check & PS 26106 Metadata', false, err.message);
   }

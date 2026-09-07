@@ -7,8 +7,7 @@ export default function Header({
   onSelectSample,
   onOpenUploadModal,
   onOpenReportModal,
-  isAnalyzing,
-  openrouterModel
+  isAnalyzing
 }) {
   return (
     <header className="border-b border-slate-200/80 bg-white/95 backdrop-blur-md sticky top-0 z-40 px-4 lg:px-8 py-3.5 shadow-sm">
@@ -34,15 +33,12 @@ export default function Header({
           </div>
         </div>
 
-        {/* AI Engine Status Pill & Problem Info */}
-        <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs text-purple-700 font-medium shadow-xs shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse shrink-0" />
-          <span className="text-purple-900 font-semibold shrink-0">GPT-6 Astra AI:</span>
-          <span className="font-semibold text-purple-700 font-mono text-[11px] max-w-[200px] truncate" title={openrouterModel || 'gpt-6-astra'}>
-            {openrouterModel || 'gpt-6-astra'}
-          </span>
-          <span className="flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-100/70 px-2 py-0.5 rounded-full font-medium ml-1 shrink-0">
-            <CheckCircle className="w-3 h-3" /> Live
+        {/* AI Engine Status Pill - Neutral Terminology */}
+        <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-xs text-blue-700 font-medium shadow-xs shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <span className="text-slate-800 font-semibold shrink-0">AI-Assisted Analysis:</span>
+          <span className="flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium ml-1 shrink-0">
+            <CheckCircle className="w-3 h-3" /> Active
           </span>
         </div>
 

@@ -26,42 +26,138 @@ export function validateAuthentication(email) {
   const arcResults = headers['arc-authentication-results'] || [];
 
   // Parse SPF
-  let spf = { status: 'none', details: 'No SPF record or validation header detected', scoreImpact: 10 };
+  let spf = { 
+    status: 'none', 
+    details: 'No SPF record or validation header detected in email headers', 
+    scoreImpact: 10,
+    source: 'Reported by receiving system',
+    evaluationMode: 'insufficient_evidence',
+    currentValidation: 'insufficient_evidence',
+    independentValidationPerformed: false
+  };
   const spfCombined = [...receivedSpf, ...authResults].join(' ');
   if (/spf=(pass)\b/i.test(spfCombined) || /^pass\b/i.test(receivedSpf[0] || '')) {
-    spf = { status: 'PASS', details: 'Sender IP is explicitly authorized by domain SPF record', scoreImpact: 0 };
+    spf = { 
+      status: 'PASS', 
+      details: 'SPF pass claim reported by intermediate receiving MTA headers', 
+      scoreImpact: 0,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   } else if (/spf=(fail)\b/i.test(spfCombined) || /^fail\b/i.test(receivedSpf[0] || '')) {
-    spf = { status: 'FAIL', details: 'Hard SPF Fail: Sender IP unauthorized by domain SPF record', scoreImpact: 35 };
+    spf = { 
+      status: 'FAIL', 
+      details: 'Hard SPF fail claim reported by intermediate receiving MTA headers', 
+      scoreImpact: 35,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   } else if (/spf=(softfail)\b/i.test(spfCombined) || /^softfail\b/i.test(receivedSpf[0] || '')) {
-    spf = { status: 'SOFTFAIL', details: 'Soft SPF Fail: Sender IP not listed in SPF policy (~all)', scoreImpact: 25 };
+    spf = { 
+      status: 'SOFTFAIL', 
+      details: 'Soft SPF fail claim reported by intermediate receiving MTA headers (~all)', 
+      scoreImpact: 25,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   } else if (/spf=(neutral|none)\b/i.test(spfCombined)) {
-    spf = { status: 'NEUTRAL', details: 'SPF Neutral: Domain does not assert sender validity (?all)', scoreImpact: 15 };
+    spf = { 
+      status: 'NEUTRAL', 
+      details: 'SPF neutral reported by intermediate receiving MTA headers (?all)', 
+      scoreImpact: 15,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   }
 
   // Parse DKIM
-  let dkim = { status: 'none', details: 'No DKIM cryptographic signature header present', scoreImpact: 15 };
+  let dkim = { 
+    status: 'none', 
+    details: 'No DKIM signature evaluation header present in email', 
+    scoreImpact: 15,
+    source: 'Reported by receiving system',
+    evaluationMode: 'insufficient_evidence',
+    currentValidation: 'insufficient_evidence',
+    independentValidationPerformed: false
+  };
   const dkimCombined = [...authResults, ...arcResults].join(' ');
   if (/dkim=(pass)\b/i.test(dkimCombined)) {
-    dkim = { status: 'PASS', details: 'Valid RSA/Ed25519 cryptographic DKIM signature verified', scoreImpact: 0 };
+    dkim = { 
+      status: 'PASS', 
+      details: 'DKIM pass claim reported by receiving mail server in Authentication-Results', 
+      scoreImpact: 0,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   } else if (/dkim=(fail)\b/i.test(dkimCombined)) {
-    dkim = { status: 'FAIL', details: 'DKIM signature check failed: Body or header has been altered', scoreImpact: 35 };
+    dkim = { 
+      status: 'FAIL', 
+      details: 'DKIM failure claim reported by receiving mail server in Authentication-Results', 
+      scoreImpact: 35,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   } else if (dkimSignature.length > 0) {
-    dkim = { status: 'UNVERIFIED', details: 'DKIM-Signature header present but unvalidated by receiver', scoreImpact: 10 };
+    dkim = { 
+      status: 'UNVERIFIED', 
+      details: 'DKIM-Signature header present in message but no receiving validation result found', 
+      scoreImpact: 10,
+      source: 'Present in headers',
+      evaluationMode: 'insufficient_evidence',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   }
 
   // Parse DMARC
-  let dmarc = { status: 'none', details: 'No DMARC evaluation found in headers', scoreImpact: 15 };
+  let dmarc = { 
+    status: 'none', 
+    details: 'No DMARC evaluation entry found in message headers', 
+    scoreImpact: 15,
+    source: 'Reported by receiving system',
+    evaluationMode: 'insufficient_evidence',
+    currentValidation: 'insufficient_evidence',
+    independentValidationPerformed: false
+  };
   if (/dmarc=(pass)\b/i.test(authResults.join(' '))) {
-    dmarc = { status: 'PASS', details: 'DMARC alignment passed with domain policy', scoreImpact: 0 };
+    dmarc = { 
+      status: 'PASS', 
+      details: 'DMARC pass claim reported by receiving mail server in Authentication-Results', 
+      scoreImpact: 0,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   } else if (/dmarc=(fail)\b/i.test(authResults.join(' '))) {
-    dmarc = { status: 'FAIL', details: 'DMARC validation failed: Domain policy violation', scoreImpact: 40 };
+    dmarc = { 
+      status: 'FAIL', 
+      details: 'DMARC policy violation claim reported by receiving mail server in Authentication-Results', 
+      scoreImpact: 40,
+      source: 'Reported by receiving system',
+      evaluationMode: 'reported',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false
+    };
   }
 
   // Display Name Spoofing Check
   const displayNameAnalysis = checkDisplayNameSpoofing(email.envelope);
 
   // Lookalike Domain / Typosquatting Check
-  const domainAnalysis = checkDomainLookalike(email.envelope.from?.domain);
+  const domainAnalysis = checkDomainLookalike(email.envelope?.from?.domain);
 
   // Return-Path & Reply-To Alignment Check
   const alignmentAnalysis = checkHeaderAlignment(email.envelope);
@@ -86,8 +182,16 @@ export function validateAuthentication(email) {
     domainAnalysis,
     alignmentAnalysis,
     authRiskScore,
+    evaluationContext: {
+      mode: 'reported',
+      source: 'Reported by receiving system',
+      currentValidation: 'insufficient_evidence',
+      independentValidationPerformed: false,
+      validationSummary: 'Results reflect claims found in uploaded message headers. No live DNS or independent cryptographic verification has been performed.',
+      disclaimer: 'Authentication evaluation reflects header claims reported by intermediate mail servers and does not represent independent cryptographic verification by AegisMail.'
+    },
     overallAuthStatus: (spf.status === 'PASS' && dkim.status === 'PASS' && dmarc.status === 'PASS' && !displayNameAnalysis.isSpoofed)
-      ? 'AUTHENTIC'
+      ? 'REPORTED_AUTHENTIC'
       : (authRiskScore >= 60 ? 'CRITICAL_RISK' : (authRiskScore >= 30 ? 'SUSPICIOUS' : 'LOW_RISK'))
   };
 }

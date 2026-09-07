@@ -40,9 +40,11 @@ const COUNTRY_COORDS = {
  * Enriches an IP address with Geolocation and ASN / ISP Intelligence
  */
 export function lookupIP(ip) {
-  if (!ip) {
+  const GEO_DISCLAIMER = 'IP geolocation describes network infrastructure and does not establish the physical location or identity of the sender.';
+
+  if (!ip || ip === 'Unknown') {
     return {
-      ip: null,
+      ip: ip || null,
       resolved: false,
       country: 'Unknown',
       countryCode: 'XX',
@@ -52,86 +54,112 @@ export function lookupIP(ip) {
       longitude: 0,
       isp: 'Unknown ISP',
       asn: 'Unknown ASN',
-      threatFlags: []
+      threatFlags: [],
+      infrastructureLocation: 'Unknown',
+      disclaimer: GEO_DISCLAIMER
     };
   }
 
-  // Handle local / private IPs
-  if (ip === '127.0.0.1' || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('172.16.')) {
+  try {
+    // Handle local / private IPs
+    if (ip === '127.0.0.1' || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('172.16.')) {
+      return {
+        ip,
+        resolved: true,
+        country: 'Local Network',
+        countryCode: 'LAN',
+        city: 'Internal Gateway / Intranet',
+        region: 'Private Subnet',
+        latitude: 0,
+        longitude: 0,
+        isp: 'RFC 1918 Private Address Space',
+        asn: 'Private / Intranet',
+        isPrivate: true,
+        threatFlags: ['Internal Private IP'],
+        infrastructureLocation: 'Internal Gateway (RFC 1918 Private Address Space)',
+        disclaimer: GEO_DISCLAIMER
+      };
+    }
+
+    const geo = geoip.lookup(ip);
+    let country = geo?.country || 'Unknown';
+    let city = geo?.city || 'Unknown';
+    let region = geo?.region || 'Unknown';
+    let lat = geo?.ll?.[0] || 0;
+    let lon = geo?.ll?.[1] || 0;
+
+    // If geoip didn't have coordinates or it's a known test/threat sample IP
+    if ((!lat && !lon) || country === 'Unknown') {
+      const sampleGeo = getSampleOrFallbackGeo(ip);
+      country = sampleGeo.country;
+      city = sampleGeo.city;
+      region = sampleGeo.region;
+      lat = sampleGeo.latitude;
+      lon = sampleGeo.longitude;
+    }
+
+    // Threat correlation & hosting heuristics
+    const threatFlags = [];
+    let isp = 'Commercial ISP / Transit Carrier';
+    let asn = 'AS' + (Math.floor(Math.abs(hashString(ip)) % 50000) + 10000);
+
+    for (const host of HOSTING_PROVIDERS) {
+      if (ip.startsWith(host.prefix)) {
+        isp = host.org;
+        if (host.isSuspicious) {
+          threatFlags.push('High-Risk IP Subnet (Known bulletproof/proxy range)');
+        }
+        if (host.isHosting) {
+          threatFlags.push('Cloud Hosting / Datacenter IP (MTA originating from cloud droplet)');
+        }
+        if (host.isCDN) {
+          threatFlags.push('Reverse Proxy / CDN Masked IP');
+        }
+        break;
+      }
+    }
+
+    // Flag high-risk originating regions often associated with spam/BEC infrastructure
+    if (['RU', 'NG', 'KP', 'IR', 'RO'].includes(country)) {
+      threatFlags.push(`Observed Sending Infrastructure in High-Risk Geographic Subnet (${country})`);
+    }
+
     return {
       ip,
       resolved: true,
-      country: 'Local Network',
-      countryCode: 'LAN',
-      city: 'Internal Gateway / Intranet',
-      region: 'Private Subnet',
+      country,
+      countryCode: geo?.country || country.slice(0, 2).toUpperCase(),
+      city,
+      region,
+      latitude: lat,
+      longitude: lon,
+      isp,
+      asn,
+      threatFlags,
+      timezone: geo?.timezone || 'UTC',
+      infrastructureLocation: `${city}, ${country}`,
+      disclaimer: GEO_DISCLAIMER
+    };
+  } catch (err) {
+    console.warn(`[geoService] IP lookup error for ${ip}:`, err);
+    return {
+      ip,
+      resolved: false,
+      status: 'unavailable',
+      reason: 'Geolocation service is currently unavailable.',
+      country: 'Unknown',
+      countryCode: 'XX',
+      city: 'Unknown',
+      region: 'Unknown',
       latitude: 0,
       longitude: 0,
-      isp: 'RFC 1918 Private Address Space',
-      asn: 'Private / Intranet',
-      isPrivate: true,
-      threatFlags: ['Internal Private IP']
+      isp: 'Unknown ISP',
+      asn: 'Unknown ASN',
+      threatFlags: [],
+      infrastructureLocation: 'Unknown',
+      disclaimer: GEO_DISCLAIMER
     };
   }
-
-  const geo = geoip.lookup(ip);
-  let country = geo?.country || 'Unknown';
-  let city = geo?.city || 'Unknown';
-  let region = geo?.region || 'Unknown';
-  let lat = geo?.ll?.[0] || 0;
-  let lon = geo?.ll?.[1] || 0;
-
-  // If geoip didn't have coordinates or it's a known test/threat sample IP
-  if ((!lat && !lon) || country === 'Unknown') {
-    // Check known test IP samples or country fallback
-    const sampleGeo = getSampleOrFallbackGeo(ip);
-    country = sampleGeo.country;
-    city = sampleGeo.city;
-    region = sampleGeo.region;
-    lat = sampleGeo.latitude;
-    lon = sampleGeo.longitude;
-  }
-
-  // Threat correlation & hosting heuristics
-  const threatFlags = [];
-  let isp = 'Commercial ISP / Transit Carrier';
-  let asn = 'AS' + (Math.floor(Math.abs(hashString(ip)) % 50000) + 10000);
-
-  for (const host of HOSTING_PROVIDERS) {
-    if (ip.startsWith(host.prefix)) {
-      isp = host.org;
-      if (host.isSuspicious) {
-        threatFlags.push('High-Risk IP Subnet (Known bulletproof/proxy range)');
-      }
-      if (host.isHosting) {
-        threatFlags.push('Cloud Hosting / Datacenter IP (MTA originating from cloud droplet)');
-      }
-      if (host.isCDN) {
-        threatFlags.push('Reverse Proxy / CDN Masked IP');
-      }
-      break;
-    }
-  }
-
-  // Flag high-risk originating regions often associated with spam/BEC if combined with spoofing
-  if (['RU', 'NG', 'KP', 'IR', 'RO'].includes(country)) {
-    threatFlags.push(`Origin in High-Risk Geographic Threat Zone (${country})`);
-  }
-
-  return {
-    ip,
-    resolved: true,
-    country,
-    countryCode: geo?.country || country.slice(0, 2).toUpperCase(),
-    city,
-    region,
-    latitude: lat,
-    longitude: lon,
-    isp,
-    asn,
-    threatFlags,
-    timezone: geo?.timezone || 'UTC'
-  };
 }
 
 function getSampleOrFallbackGeo(ip) {
