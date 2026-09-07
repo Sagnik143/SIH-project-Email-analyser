@@ -8,6 +8,7 @@ import { lookupIP, calculateDistanceKm } from './services/geoService.js';
 import { validateAuthentication } from './services/authValidator.js';
 import { extractIoCs } from './services/iocExtractor.js';
 import { analyzeEmailThreatWithAI } from './services/aiThreatEngine.js';
+import { analyzeAttributionAndGraph } from './services/attributionEngine.js';
 import { SAMPLE_EMAILS } from './data/samples.js';
 
 dotenv.config();
@@ -29,8 +30,12 @@ app.get('/api/health', (req, res) => {
     status: 'online',
     timestamp: new Date().toISOString(),
     engine: 'Email Threat Forensic Intelligence Engine v1.0',
-    openrouterKeyConfigured: !!process.env.OPENROUTER_API_KEY,
-    primaryModel: process.env.OPENROUTER_MODEL || 'minimax/minimax-m3:free'
+    problemStatementId: 26106,
+    problemTitle: 'AI-Powered Email Threat Detection, GeoLocation and Forensic Intelligence Platform',
+    organization: 'All India Council for Technical Education (Cyber Security Cell)',
+    openrouterKeyConfigured: !!(process.env.EXPLABS_API_KEY || process.env.OPENROUTER_API_KEY),
+    aiKeyConfigured: !!process.env.EXPLABS_API_KEY,
+    primaryModel: process.env.AI_MODEL || process.env.OPENROUTER_MODEL || 'gpt-6-astra'
   });
 });
 
@@ -155,7 +160,7 @@ app.post('/api/analyze', upload.single('emailFile'), async (req, res) => {
       relay: relayAnalysis
     });
 
-    // 7. AI Threat Intelligence Assessment (OpenRouter Minimax-M3 / Fallback)
+    // 7. AI Threat Intelligence Assessment (ExperientialLabs GPT-6 Astra)
     const aiAssessment = await analyzeEmailThreatWithAI(
       parsedEmail,
       relayAnalysis,
@@ -164,9 +169,20 @@ app.post('/api/analyze', upload.single('emailFile'), async (req, res) => {
       originGeo
     );
 
-    // 8. Assemble unified forensic dossier
+    // 8. Identity Correlation, Attribution & Graph Relationship Engine (AICTE 26106)
+    const attributionAndGraph = analyzeAttributionAndGraph(
+      parsedEmail,
+      relayAnalysis,
+      authData,
+      iocData,
+      originGeo,
+      aiAssessment
+    );
+
+    // 9. Assemble unified forensic dossier
     const forensicDossier = {
-      dossierId: `DFIR-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      dossierId: `DFIR-AICTE-26106-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+      problemStatementId: 26106,
       timestamp: new Date().toISOString(),
       integrity: parsedEmail.integrity,
       envelope: parsedEmail.envelope,
@@ -179,6 +195,7 @@ app.post('/api/analyze', upload.single('emailFile'), async (req, res) => {
       authentication: authData,
       iocs: iocData,
       aiThreatIntelligence: aiAssessment,
+      attributionAndGraph,
       rawHeaders: parsedEmail.headers,
       headerLines: parsedEmail.headerLines
     };
@@ -199,6 +216,6 @@ app.listen(PORT, () => {
   console.log(`\n======================================================`);
   console.log(`⚡ Email Threat Forensic & GeoLocation Server running`);
   console.log(`🚀 API Port: http://localhost:${PORT}`);
-  console.log(`🛡️ AI Model: ${process.env.OPENROUTER_MODEL || 'minimax/minimax-m3:free'}`);
+  console.log(`🛡️ AI Model: ${process.env.AI_MODEL || 'gpt-6-astra'} (ExperientialLabs)`);
   console.log(`======================================================\n`);
 });

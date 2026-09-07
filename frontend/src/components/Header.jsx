@@ -22,27 +22,27 @@ export default function Header({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-800 bg-clip-text text-transparent">
-                AegisMail
+                AegisMail DFIR
               </h1>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700">
-                AI Threat Intelligence
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                AICTE PS #26106
               </span>
             </div>
             <p className="text-xs text-slate-500 font-medium">
-              Smart Email Threat Detection, Geolocation & Forensic Origin Tracing
+              AI-Powered Email Threat Detection, GeoLocation & Forensic Intelligence
             </p>
           </div>
         </div>
 
-        {/* AI Engine Status Pill */}
-        <div className="hidden lg:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs text-purple-700 font-medium shadow-xs">
-          <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-          <span className="text-purple-900">AI Core:</span>
-          <span className="font-semibold text-purple-700 font-mono">
-            {openrouterModel || 'minimax/minimax-m3:free'}
+        {/* AI Engine Status Pill & Problem Info */}
+        <div className="hidden xl:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-50 border border-purple-200 text-xs text-purple-700 font-medium shadow-xs shrink-0">
+          <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse shrink-0" />
+          <span className="text-purple-900 font-semibold shrink-0">GPT-6 Astra AI:</span>
+          <span className="font-semibold text-purple-700 font-mono text-[11px] max-w-[200px] truncate" title={openrouterModel || 'gpt-6-astra'}>
+            {openrouterModel || 'gpt-6-astra'}
           </span>
-          <span className="flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-100/60 px-2 py-0.5 rounded-full font-medium ml-1">
-            <CheckCircle className="w-3 h-3" /> Ready
+          <span className="flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-100/70 px-2 py-0.5 rounded-full font-medium ml-1 shrink-0">
+            <CheckCircle className="w-3 h-3" /> Live
           </span>
         </div>
 

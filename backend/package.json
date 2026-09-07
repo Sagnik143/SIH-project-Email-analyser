@@ -16,6 +16,7 @@
     "express": "^4.21.2",
     "geoip-lite": "^1.4.10",
     "mailparser": "^3.7.2",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "openai": "^7.10.0"
   }
 }

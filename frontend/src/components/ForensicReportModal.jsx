@@ -24,7 +24,7 @@ export default function ForensicReportModal({ dossier, isOpen, onClose }) {
   const { dossierId, timestamp, integrity, envelope, originGeo, relay, authentication, aiThreatIntelligence, iocs } = dossier;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
       <div className="relative w-full max-w-4xl bg-white border border-slate-200 rounded-2xl shadow-2xl p-6 md:p-8 my-8 text-slate-800">
         
         {/* Top Control Bar */}
@@ -71,8 +71,11 @@ export default function ForensicReportModal({ dossier, isOpen, onClose }) {
           <div className="border-b border-slate-100 pb-5">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <div>
+                <div className="text-[11px] font-bold text-blue-700 uppercase tracking-widest flex items-center gap-1 mb-1">
+                  <span>AICTE Cyber Security Cell &bull; Problem Statement ID: 26106</span>
+                </div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-950">
-                  INCIDENT FORENSIC REPORT
+                  INCIDENT FORENSIC DOSSIER
                 </h1>
                 <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
                   <Calendar className="w-3.5 h-3.5 text-blue-600" />

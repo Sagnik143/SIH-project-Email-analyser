@@ -22,15 +22,20 @@ export default function AIIntelligenceCard({ aiThreatIntelligence }) {
               AI Security Analysis & Deception Detection
             </h3>
             <p className="text-xs text-slate-500">
-              Semantic evaluation powered by OpenRouter LLM & psychological manipulation detection
+              Semantic evaluation powered by GPT-6 Astra LLM & psychological manipulation detection
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {ai.reasoningTokens !== undefined && ai.reasoningTokens !== null && (
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shadow-2xs">
+              ⚡ Reasoning: {ai.reasoningTokens} tokens
+            </span>
+          )}
           <span className="text-xs font-semibold px-3 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1.5 shadow-2xs">
             <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            {ai.modelUsed || 'minimax/minimax-m3:free'}
+            {ai.modelUsed || 'gpt-6-astra'}
           </span>
         </div>
       </div>
@@ -67,18 +72,29 @@ export default function AIIntelligenceCard({ aiThreatIntelligence }) {
           </p>
         </div>
 
-        {/* Right: Threat Actor Profile */}
+        {/* Right: Threat Actor Profile & Attribution */}
         <div className="md:col-span-5 p-4 rounded-xl bg-purple-50/60 border border-purple-100 space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold text-purple-900">
             <UserX className="w-4 h-4 text-purple-600" />
-            <span>Likely Attacker Persona</span>
+            <span>Probable Attacker Persona</span>
           </div>
           <div className="text-sm font-bold text-purple-950">
-            {ai.threatActorPersona || 'Authorized Sender'}
+            {ai.threatActorPersona || ai.attribution?.probableActorPersona || 'Authorized Sender'}
           </div>
-          <p className="text-xs text-slate-500 leading-normal">
-            Correlated through linguistic urgency analysis, server origin hops, and sender headers.
-          </p>
+          {ai.attribution?.campaignCluster && (
+            <div className="pt-1">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Campaign Cluster: </span>
+              <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                {ai.attribution.campaignCluster}
+              </span>
+            </div>
+          )}
+          {ai.attribution?.infrastructureClassification && (
+            <div className="text-[11px] text-slate-600">
+              <span className="font-semibold">Infrastructure: </span>
+              {ai.attribution.infrastructureClassification}
+            </div>
+          )}
         </div>
 
       </div>

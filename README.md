@@ -2,7 +2,7 @@
 
 [![React](https://img.shields.io/badge/Frontend-React%20%7C%20TailwindCSS%20%7C%20Vite-blue)](https://react.dev/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js%20%7C%20Express-green)](https://nodejs.org/)
-[![OpenRouter](https://img.shields.io/badge/AI%20Engine-OpenRouter%20%28Minimax--M3%29-purple)](https://openrouter.ai/)
+[![AI Engine](https://img.shields.io/badge/AI%20Engine-ExperientialLabs%20%28GPT--6%20Astra%29-purple)](https://experientiallabs.ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **A comprehensive Digital Forensics and Incident Response (DFIR) platform** for email threat analysis, SMTP relay hop reconstruction, geolocation trajectory mapping, sender authentication verification, and AI-driven social engineering detection.
@@ -17,7 +17,7 @@
 - **Interactive Dark Matter Geo Hop Map:** Visualizes email transit across world coordinates with Leaflet, animated vectors, and origin crosshairs.
 - **Sender Authentication Verification Matrix:** Validates SPF records, DKIM cryptographic signatures, and DMARC domain policies.
 - **Identity Deception Detection:** Flags Display-Name spoofing, authority impersonation, and typosquatted/lookalike domains using Levenshtein distance, visual homoglyphs, and Punycode (IDN homographs).
-- **AI Threat Intelligence (OpenRouter SDK + Minimax-M3):** Performs semantic NLP analysis on language urgency, financial coercion, and credential lures, outputting structured SOC threat scores (0-100), attacker personas, and actionable mitigation playbooks.
+- **AI Threat Intelligence (ExperientialLabs GPT-6 Astra):** Performs semantic NLP analysis on language urgency, financial coercion, and credential lures, outputting structured SOC threat scores (0-100), attacker personas, and actionable mitigation playbooks.
 - **Indicators of Compromise (IoC) Vault:** Automatically extracts defanged URLs (`hxxp[://]...`), detects deceptive anchor text, isolates domains and IPs, and hashes file attachments.
 - **Evidentiary Forensic Dossier:** Exportable forensic dossier in JSON and printable PDF format with full chain-of-custody metadata.
 
@@ -31,7 +31,7 @@
 |  - Threat Radar & Confidence Gauge (0-100 Score)                                      |
 |  - Interactive Leaflet Geo Hop Map (CartoDB Dark Matter)                              |
 |  - SMTP Relay Hop Visual Timeline & Node Graph                                        |
-|  - AI Forensic Investigator Report (OpenRouter Minimax-M3)                            |
+|  - AI Forensic Investigator Report (ExperientialLabs GPT-6 Astra)                     |
 |  - IoC Threat Table (Extracted URLs, Domains, IPs, SHA-256 Hashes)                    |
 |  - Live Raw Header Inspector with RFC Annotation & Authentication Badges              |
 |  - Evidentiary Export (Forensic PDF / JSON Dossier with Hash Fingerprint)             |
@@ -45,7 +45,7 @@
 |  4. Domain Forensics (Levenshtein lookalike, punycode homoglyphs, brand spoof)        |
 |  5. IP Geo & Threat Engine (City, Country, Lat/Lon, ASN, ISP, VPN/Hosting flag)       |
 |  6. IoC Extractor (Defanged URLs, suspicious TLDs, attachment hashes & risks)         |
-|  7. OpenRouter AI Engine (@openrouter/sdk + Minimax-M3 / fallback + Prompt Template)  |
+|  7. ExperientialLabs AI Engine (OpenAI SDK + GPT-6 Astra + Heuristic DFIR Fallback)   |
 |  8. Forensic Report & Evidentiary Hash Generator (SHA-256 integrity check)            |
 +---------------------------------------------------------------------------------------+
 ```
@@ -63,7 +63,7 @@
 cd backend
 npm install
 cp .env.example .env
-# Edit .env with your OpenRouter API Key
+# Edit .env with your ExperientialLabs API Key (EXPLABS_API_KEY)
 npm start
 ```
 *Backend runs on `http://localhost:5001`.*

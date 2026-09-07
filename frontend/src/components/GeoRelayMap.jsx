@@ -36,10 +36,10 @@ export default function GeoRelayMap({ relay, originGeo }) {
 
     L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // CartoDB Voyager Clean Light Tile Layer
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 19
+    // OpenStreetMap Clean High-Resolution Tile Layer (No API Key Required, No Watermark)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
     }).addTo(map);
 
     const latLngs = [];
@@ -119,7 +119,7 @@ export default function GeoRelayMap({ relay, originGeo }) {
   }, [trajectory]);
 
   return (
-    <div className="app-card p-5 flex flex-col space-y-3.5 bg-white border-slate-200">
+    <div className="app-card p-6 space-y-4 bg-white border-slate-200 shadow-xs relative isolate z-0">
       
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -162,11 +162,11 @@ export default function GeoRelayMap({ relay, originGeo }) {
       )}
 
       {/* Map Container */}
-      <div className="relative w-full h-[320px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50">
-        <div ref={mapContainerRef} className="w-full h-full" />
+      <div className="relative w-full h-[320px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-50 isolate z-0">
+        <div ref={mapContainerRef} className="w-full h-full z-0" />
 
         {/* Origin Quick Overlay Pin */}
-        <div className="absolute bottom-3 left-3 z-[400] px-3.5 py-2 rounded-xl bg-white/95 backdrop-blur-md border border-slate-200 text-xs text-slate-700 shadow-md flex items-center gap-2.5 font-medium">
+        <div className="absolute bottom-3 left-3 z-10 px-3.5 py-2 rounded-xl bg-white/95 backdrop-blur-md border border-slate-200 text-xs text-slate-700 shadow-md flex items-center gap-2.5 font-medium">
           <MapPin className="w-4 h-4 text-rose-600" />
           <span>Origin: <strong className="text-slate-900">{originGeo?.city || 'Unknown'}, {originGeo?.country || 'Unknown'}</strong></span>
           <span className="text-slate-300">|</span>

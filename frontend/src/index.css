@@ -77,3 +77,13 @@ body {
 .leaflet-popup-tip {
   background: #ffffff !important;
 }
+
+/* Ensure Leaflet internal controls and panes stay contained inside their card */
+.leaflet-pane {
+  z-index: 10 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 20 !important;
+}

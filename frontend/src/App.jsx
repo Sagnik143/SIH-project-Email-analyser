@@ -7,6 +7,7 @@ import AIIntelligenceCard from './components/AIIntelligenceCard';
 import AuthMatrix from './components/AuthMatrix';
 import IoCVault from './components/IoCVault';
 import HeaderInspector from './components/HeaderInspector';
+import AttributionGraphCard from './components/AttributionGraphCard';
 import ForensicReportModal from './components/ForensicReportModal';
 import EmailInputModal from './components/EmailInputModal';
 import { API_BASE_URL } from './config';
@@ -18,7 +19,7 @@ export default function App() {
   const [dossier, setDossier] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState(null);
-  const [openrouterModel, setOpenrouterModel] = useState('minimax/minimax-m3:free');
+  const [openrouterModel, setOpenrouterModel] = useState('gpt-6-astra');
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -140,7 +141,7 @@ export default function App() {
               Analyzing Email Threat Telemetry...
             </div>
             <p className="text-xs text-slate-500 max-w-md leading-relaxed">
-              Tracing server hops &bull; Geocoding sender origin &bull; Checking authentication &bull; OpenRouter AI evaluation
+              Tracing server hops &bull; Geocoding sender origin &bull; Checking authentication &bull; GPT-6 Astra AI evaluation
             </p>
           </div>
         )}
@@ -164,7 +165,10 @@ export default function App() {
             {/* 3. AI Security Analysis & Deception Detection */}
             <AIIntelligenceCard aiThreatIntelligence={dossier.aiThreatIntelligence} />
 
-            {/* 4. Sender Identity & Authentication Verifications */}
+            {/* 4. Graph Correlation & Sender Attribution (AICTE PS #26106) */}
+            <AttributionGraphCard attributionAndGraph={dossier.attributionAndGraph} />
+
+            {/* 5. Sender Identity & Authentication Verifications */}
             <AuthMatrix authentication={dossier.authentication} envelope={dossier.envelope} />
 
             {/* 5. Indicators of Compromise (IoC) Vault */}
