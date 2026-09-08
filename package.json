@@ -1,0 +1,12 @@
+{
+  "name": "mailguard",
+  "version": "1.0.0",
+  "description": "MailGuard — Email Threat Detection, Geolocation & Forensic Intelligence Platform",
+  "scripts": {
+    "dev": "npm run dev --prefix frontend",
+    "start": "npm run dev --prefix frontend",
+    "frontend": "npm run dev --prefix frontend",
+    "backend": "python -m uvicorn main:app --app-dir backend --reload --port 8000",
+    "build": "npm run build --prefix frontend"
+  }
+}
