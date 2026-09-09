@@ -317,9 +317,9 @@ function analyzeSentiment(text) {
  */
 function calculateNLPScore(scores) {
   const weights = {
-    urgencyScore: 0.15,
+    urgencyScore: 0.20,
     phishingScore: 0.25,
-    impersonationScore: 0.25,
+    impersonationScore: 0.20,
     socialEngineeringScore: 0.15,
     becScore: 0.15,
     sentimentScore: 0.05,
@@ -329,6 +329,10 @@ function calculateNLPScore(scores) {
   for (const [key, weight] of Object.entries(weights)) {
     total += (scores[key] || 0) * weight;
   }
+
+  const values = Object.values(scores || {});
+  const maxSignal = values.length > 0 ? Math.max(...values) : 0;
+  total = Math.max(total, maxSignal * 0.6);
 
   return Math.round(Math.min(100, total));
 }

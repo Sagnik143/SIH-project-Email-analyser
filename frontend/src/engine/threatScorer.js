@@ -67,7 +67,7 @@ export function calculateThreatScore(analysisResults) {
  * Calculate aggregate IP risk from all IP results
  */
 function calculateAggregateIPRisk(ipResults) {
-  if (!ipResults || ipResults.length === 0) return 20;
+  if (!ipResults || ipResults.length === 0) return 10;
 
   let maxRisk = 0;
   for (const ip of ipResults) {
@@ -94,14 +94,13 @@ function classifyThreat(score, results) {
   const nlp = results.nlpResult || {};
   const hasBEC = nlp.bec?.score > 30;
   const hasImpersonation = nlp.impersonation?.score > 30;
-  const hasPhishing = nlp.phishing?.score > 40;
+  const hasPhishing = nlp.phishing?.score > 30;
 
-  if (hasBEC && score > 35) return 'fraud';
-  if (hasImpersonation && score > 30) return 'impersonation';
-  if (hasPhishing && score > 35) return 'phishing';
+  if (hasBEC && score > 20) return 'fraud';
+  if (hasImpersonation && score > 20) return 'impersonation';
+  if (hasPhishing && score > 25) return 'phishing';
   if (score >= 65) return 'phishing';
-  if (score >= 40) return 'suspicious';
-  if (score >= 20) return 'suspicious';
+  if (score >= 35) return 'suspicious';
   return 'legitimate';
 }
 

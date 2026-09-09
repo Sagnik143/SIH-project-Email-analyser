@@ -267,14 +267,16 @@ def _analyze_sentiment(text: str) -> dict:
 
 def _calculate_nlp_score(scores: dict) -> int:
     weights = {
-        "urgencyScore": 0.15,
+        "urgencyScore": 0.20,
         "phishingScore": 0.25,
-        "impersonationScore": 0.25,
+        "impersonationScore": 0.20,
         "socialEngineeringScore": 0.15,
         "becScore": 0.15,
         "sentimentScore": 0.05,
     }
     total = sum((scores.get(k, 0) * w) for k, w in weights.items())
+    max_signal = max(scores.values()) if scores else 0
+    total = max(total, max_signal * 0.6)
     return round(min(100, total))
 
 def _classify_by_nlp(score: int, findings: list) -> str:

@@ -53,7 +53,7 @@ def calculate_threat_score(analysis_results: dict) -> dict:
 
 def _calculate_aggregate_ip_risk(ip_results: list) -> int:
     if not ip_results:
-        return 20
+        return 10
     max_risk = 0
     for ip in ip_results:
         risk = 0
@@ -78,11 +78,11 @@ def _classify_threat(score: int, results: dict) -> str:
     imp_score = nlp.get("impersonation", {}).get("score", 0)
     phish_score = nlp.get("phishing", {}).get("score", 0)
 
-    if bec_score > 30 and score > 35:
+    if bec_score > 30 and score > 20:
         return "fraud"
-    if imp_score > 30 and score > 30:
+    if imp_score > 30 and score > 20:
         return "impersonation"
-    if phish_score > 40 and score > 35:
+    if phish_score > 30 and score > 25:
         return "phishing"
     if score >= 65:
         return "phishing"
