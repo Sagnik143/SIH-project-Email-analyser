@@ -3,7 +3,7 @@
  * Routes, layout, and context providers.
  */
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { EmailProvider } from './context/EmailContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -21,10 +21,15 @@ export default function App() {
           <main className="main-content">
             <Routes>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
               <Route path="/analyze" element={<EmailAnalyzer />} />
+              <Route path="/email-analyzer" element={<Navigate to="/analyze" replace />} />
               <Route path="/geo-tracer" element={<GeoTracer />} />
               <Route path="/cases" element={<CaseManagement />} />
+              <Route path="/case-management" element={<Navigate to="/cases" replace />} />
               <Route path="/reports" element={<ForensicReport />} />
+              <Route path="/forensic-report" element={<Navigate to="/reports" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
         </div>

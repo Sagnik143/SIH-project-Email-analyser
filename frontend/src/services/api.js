@@ -3,13 +3,16 @@
  * Connects frontend components to the Python FastAPI backend.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// Base URL from environment variable, sanitized to prevent trailing slashes or duplicate /api segments
+const rawBaseUrl = (import.meta.env.VITE_API_URL || '').trim();
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '').replace(/\/api$/, '');
 
 /**
  * Helper to make JSON HTTP requests with error handling
  */
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${API_BASE_URL}${cleanEndpoint}`;
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
